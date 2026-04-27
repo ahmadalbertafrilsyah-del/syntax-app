@@ -82,7 +82,7 @@ export default function LandingPage() {
                className="absolute -top-6 -right-6 bg-white p-4 rounded-2xl shadow-lg border border-slate-50 flex items-center gap-3"
             >
               <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 font-bold">✓</div>
-              <div className="text-xs font-bold text-slate-600">RPP Akurat</div>
+              <div className="text-xs font-bold text-slate-600">Media Ajar Akurat</div>
             </motion.div>
           </motion.div>
         </div>

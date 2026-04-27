@@ -3,26 +3,53 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "./firebase";
-import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import { collection, query, where, getDocs, limit, doc, getDoc } from "firebase/firestore";
 
-// PERHATIKAN: Ada tanda bintang (*) setelah function. Ini menandakan Async Generator untuk Streaming!
+// ============================================================================
+// FUNGSI INTERNAL: Mengambil Kunci API Aktif dari Firestore (Diatur oleh Admin)
+// ============================================================================
+async function getActiveApiKey(): Promise<string> {
+  try {
+    const settingsDoc = await getDoc(doc(db, "settings", "api_keys"));
+    if (settingsDoc.exists()) {
+      const data = settingsDoc.data();
+      const activeId = data.activeKeyId;
+      const keysArray = data.keys || [];
+      
+      // Cari key yang id-nya cocok dengan activeId
+      const activeKeyObj = keysArray.find((k: any) => k.id === activeId);
+      
+      if (activeKeyObj && activeKeyObj.value) {
+        console.log(`🔑 Menggunakan API Key dari Database: [${activeKeyObj.name}]`);
+        return activeKeyObj.value;
+      }
+    }
+  } catch (error) {
+    console.error("⚠️ Gagal membaca API Key dari Firebase, mencoba fallback ke .env...", error);
+  }
+
+  // FALLBACK: Jika tidak ada di database, gunakan yang ada di .env Vercel/Lokal
+  const fallbackKey = process.env.GEMINI_API_KEY;
+  if (!fallbackKey) {
+    throw new Error("API Key Gemini tidak ditemukan di Database maupun di .env. Hubungi Admin.");
+  }
+  console.log("🔑 Menggunakan API Key dari .env (Fallback)");
+  return fallbackKey;
+}
+
+// ============================================================================
+// FITUR 1: GENERATOR PERANGKAT AJAR (SUPER PROMPT: STANDAR NASIONAL)
+// ============================================================================
 export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: string, topik: string, sumber: string) {
   try {
     console.log(`\n--- MEMULAI PROSES AI (MODE STREAMING) ---`);
     console.log(`Request: ${tipe} | ${mapel} | ${fase} | ${topik} | ${sumber}`);
 
-    // 1. CEK API KEY DULU
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("🛑 ERROR: GEMINI_API_KEY KOSONG ATAU TIDAK TERDETEKSI!");
-      throw new Error("API Key Gemini tidak ditemukan. Tolong matikan terminal (Ctrl+C) dan ketik 'npm run dev' lagi.");
-    }
-
+    const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // 2. PROSES RAG (Pencarian Kurikulum)
+    // 1. PROSES RAG (Pencarian Kurikulum di Firebase)
     let konteksKurikulum = "Gunakan pengetahuan umum Kurikulum Merdeka.";
-    
     try {
       const faseSingkat = fase.split(" ")[0] + " " + fase.split(" ")[1]; 
       const q = query(
@@ -36,74 +63,115 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
       if (!querySnapshot.empty) {
         konteksKurikulum = querySnapshot.docs[0].data().konten;
         console.log("✅ RAG Firebase Berhasil: Referensi kurikulum ditemukan.");
-      } else {
-        console.log("⚠️ RAG Info: Tidak ada data kurikulum spesifik di database. Memakai pengetahuan bawaan AI.");
       }
     } catch (firebaseError) {
-      console.error("⚠️ RAG Error (Firebase gagal dipanggil dari server):", firebaseError);
-      console.log("Lanjut ke pembuatan AI tanpa RAG...");
+      console.log("⚠️ Menggunakan database pengetahuan bawaan AI...");
     }
 
-    // 3. MENYUSUN INSTRUKSI KHUSUS
+    // 2. MENYUSUN INSTRUKSI KHUSUS SESUAI STANDAR BAKU DARI ADMIN
     let instruksiSistem = "";
+    
+    // Logika Karakter Siswa berdasarkan Kementerian
+    const profilPelajar = sumber === "Kementerian Agama" 
+      ? "Profil Pelajar Pancasila (P5) dan nilai-nilai Profil Pelajar Rahmatan Lil 'Alamin (PPRA)" 
+      : "Profil Pelajar Pancasila (P5)";
 
-    if (sumber === "Kementerian Agama") {
-      instruksiSistem += "\n- WAJIB integrasikan nilai-nilai Moderasi Beragama dan nilai Keislaman (Rahmatan Lil 'Alamin) ke dalam materi atau kegiatan.";
-    } else {
-      instruksiSistem += "\n- WAJIB integrasikan penguatan Profil Pelajar Pancasila (P5) yang relevan.";
-    }
-
-    if (tipe === "Modul Ajar (PPM)" || tipe === "RPP") {
-      instruksiSistem += "\n- Format Wajib: Identitas Umum, Kompetensi Awal, Tujuan Pembelajaran, Pemahaman Bermakna, Pertanyaan Pemantik, Kegiatan Pembelajaran (Pendahuluan, Inti, Penutup), dan Asesmen.";
-    } 
-    else if (tipe === "Analisis TP" || tipe === "Alur TP (ATP)") {
-      instruksiSistem += "\n- Format Wajib: Buat tabel atau urutan logis penjabaran dari Capaian Pembelajaran (CP) menjadi beberapa Tujuan Pembelajaran (TP), dan susun menjadi Alur Tujuan Pembelajaran (ATP) yang berkesinambungan.";
+    if (tipe === "PROTA") {
+      instruksiSistem += `\n- FORMAT WAJIB PROTA (Program Tahunan):
+        Buat gambaran umum alokasi waktu 1 tahun. Wajib memuat:
+        1. Identitas: Mata pelajaran, satuan pendidikan, fase/kelas, tahun pelajaran.
+        2. Capaian Pembelajaran (CP): Target kompetensi di akhir fase.
+        3. Daftar Materi/Tujuan Pembelajaran (TP): Rincian materi pokok.
+        4. Alokasi Waktu (JP): Total Jam Pelajaran untuk setiap TP selama satu tahun.`;
     } 
     else if (tipe === "PROMES") {
-      instruksiSistem += "\n- Format Wajib: Buat rancangan Program Semester. Susun tabel alokasi waktu per minggu/bulan selama satu semester untuk topik tersebut.";
+      instruksiSistem += `\n- FORMAT WAJIB PROMES / PROSEM (Program Semester):
+        Buat dalam format matriks/tabel. Wajib memuat:
+        1. Identitas: Mata pelajaran, kelas, semester, tahun pelajaran.
+        2. Daftar Tujuan Pembelajaran (TP) & Materi Pokok.
+        3. Alokasi Waktu Total: Jam pelajaran per materi.
+        4. Distribusi Waktu: Matriks/tabel pemetaan materi ke minggu ke-1, ke-2, dst. pada setiap bulan dalam semester tersebut.
+        5. Keterangan: Penanda untuk masa ujian, hari libur, dll.`;
     } 
-    else if (tipe === "PROTA") {
-      instruksiSistem += "\n- Format Wajib: Buat rancangan Program Tahunan. Susun alokasi waktu (Jam Pelajaran) selama satu tahun penuh untuk topik dan sub-topik yang relevan.";
+    else if (tipe === "Analisis TP") {
+      instruksiSistem += `\n- FORMAT WAJIB ANALISIS TP:
+        Bedah CP menjadi TP yang spesifik. Wajib memuat:
+        1. Elemen CP: Bagian spesifik dari CP.
+        2. Kompetensi (Kata Kerja): Keterampilan yang harus dikuasai (misal: menganalisis, merancang).
+        3. Lingkup Materi: Konten/ilmu pengetahuan utama.
+        4. Rumusan TP: Kalimat gabungan antara kompetensi dan lingkup materi.`;
+    } 
+    else if (tipe === "Alur TP (ATP)") {
+      instruksiSistem += `\n- FORMAT WAJIB ATP (Alur Tujuan Pembelajaran):
+        Wajib memuat:
+        1. Identitas Lengkap.
+        2. Urutan Tujuan Pembelajaran (TP): Susun logis dari yang paling dasar hingga paling kompleks.
+        3. Alokasi Waktu: Estimasi JP untuk tiap TP.
+        4. Profil Pelajar: Cantumkan dimensi ${profilPelajar} yang relevan pada tiap TP.`;
+    } 
+    else if (tipe === "Modul Ajar (PPM)") {
+      instruksiSistem += `\n- FORMAT WAJIB MODUL AJAR:
+        Wajib memuat 3 komponen utama:
+        1. Informasi Umum: Identitas, Kompetensi Awal, Sarpras, Target Peserta Didik, dan integrasi ${profilPelajar}.
+        2. Komponen Inti: Tujuan, Pemahaman Bermakna, Pertanyaan Pemantik, Langkah Pembelajaran (Pendahuluan, Inti, Penutup), dan Rencana Asesmen.
+        3. Lampiran: Contoh LKPD, Bahan Bacaan, Glosarium, Daftar Pustaka.`;
+    } 
+    else if (tipe === "RPP") {
+      instruksiSistem += `\n- FORMAT WAJIB RPP:
+        Wajib memuat:
+        1. Identitas: Kelas, mata pelajaran, alokasi waktu.
+        2. Tujuan Pembelajaran (TP).
+        3. Langkah-langkah Pembelajaran: Urutan kegiatan (pembukaan, inti, penutup).
+        4. Penilaian (Asesmen): Cara menilai ketercapaian tujuan.`;
     } 
     else if (tipe === "Bank Soal") {
-      instruksiSistem += "\n- Format Wajib: Buat 10 soal Pilihan Ganda (A, B, C, D) dan 5 Soal Esai HOTS (Higher Order Thinking Skills). Berikan Kunci Jawaban dan Pembahasannya di bagian paling bawah.";
+      instruksiSistem += `\n- FORMAT WAJIB BANK SOAL:
+        Wajib memuat:
+        1. Kisi-kisi Soal: Pemetaan TP, indikator soal, bentuk soal, dan tingkat kesukaran (C1-C6).
+        2. Kumpulan Butir Soal: Sediakan ragam instrumen (Pilihan Ganda, Isian Singkat, Esai) dalam jumlah yang banyak/fleksibel.
+        3. Kunci Jawaban.`;
     } 
     else if (tipe === "Rubrik Penilaian") {
-      instruksiSistem += "\n- Format Wajib: Buat tabel rubrik penilaian dengan kriteria tingkat pencapaian (misal: Sangat Baik, Baik, Cukup, Perlu Bimbingan) beserta deskripsi indikator yang jelas untuk topik ini.";
+      instruksiSistem += `\n- FORMAT WAJIB RUBRIK PENILAIAN:
+        Buat panduan scoring dalam bentuk tabel. Wajib memuat:
+        1. Aspek/Kriteria yang Dinilai (misal: keakuratan konten, kreativitas).
+        2. Skala Capaian: Gunakan skala "Mulai Berkembang", "Layak", "Cakap", "Mahir".
+        3. Deskripsi Indikator: Penjelasan spesifik pada setiap skala (Contoh: Mendapat Mahir JIKA mampu menjelaskan konsep dengan benar tanpa bantuan).`;
     }
 
-    // 4. PROSES GENERASI AI (MODE STREAMING)
-    console.log("Menghubungi server Google Gemini...");
-    // Menggunakan gemini-1.5-flash karena ini versi paling stabil dan cepat untuk streaming
+    // 3. PROSES GENERASI AI (MODE STREAMING)
+    console.log("Menghubungi Google Gemini...");
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-      Anda adalah ahli pendidikan dan penyusun kurikulum profesional di Indonesia untuk ${sumber}.
-      Tugas utama Anda: Buat dokumen "${tipe}" untuk mata pelajaran "${mapel}" pada jenjang "${fase}" tentang topik "${topik}".
+      Anda adalah pakar kurikulum dan ahli pendidikan profesional di Indonesia.
+      Tugas utama Anda: Buat dokumen "${tipe}" untuk mata pelajaran "${mapel}" pada jenjang "${fase}".
 
-      REFERENSI WAJIB (Pedoman CP/Materi Dasar):
+      INFORMASI MATERI / TOPIK / INSTRUKSI KHUSUS:
+      "${topik}"
+
+      REFERENSI KURIKULUM DASAR:
       ${konteksKurikulum}
 
-      INSTRUKSI FORMAT & ATURAN WAJIB:
+      ATURAN BAKU & FORMAT (WAJIB DIPATUHI 100%):
       ${instruksiSistem}
-      - Tuliskan dalam format Markdown yang rapi (gunakan heading, tabel Markdown, atau list jika diperlukan).
-      - Jangan berikan kalimat pengantar atau basa-basi (seperti "Berikut adalah dokumennya..."), langsung mulai dari Judul Dokumen di baris pertama.
+
+      - Tuliskan dalam format Markdown yang sangat rapi dan profesional. 
+      - Gunakan format tabel Markdown jika struktur dokumen tersebut lebih mudah dibaca dalam bentuk tabel (seperti pada PROMES, Kisi-kisi, atau Rubrik).
+      - Jangan berikan kalimat pengantar (seperti "Berikut adalah dokumennya..."). Langsung tuliskan Judul Dokumen di baris pertama.
     `;
 
-    // INI KUNCI STREAMING-NYA: generateContentStream
     const result = await model.generateContentStream(prompt);
     
-    // Perulangan untuk mengirim teks potongan demi potongan (chunk) ke frontend
     for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
-      yield chunkText; // yield akan langsung melempar teks ke layar tanpa menunggu selesai
+      yield chunk.text();
     }
 
-    console.log("✅ AI Berhasil menyelesaikan streaming dokumen!");
+    console.log("✅ Dokumen berstandar nasional berhasil di-generate!");
 
   } catch (error: any) {
-    console.error("🛑 ERROR FATAL AI.TS:", error.message || error);
-    throw new Error(error.message || "Gagal menghubungi AI. Silakan cek terminal VS Code.");
+    console.error("🛑 ERROR AI.TS:", error.message || error);
+    throw new Error(error.message || "Gagal menghubungi AI. Pastikan API Key valid.");
   }
 }
 
@@ -115,11 +183,8 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
     console.log(`\n--- MEMULAI VISION AI STREAMING ---`);
     console.log(`Request: ${mapel} | ${fase} | Image MimeType: ${mimeType}`);
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API Key Gemini tidak ditemukan.");
-
+    const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Gemini 1.5 Flash sangat brilian dalam membaca gambar
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
@@ -141,7 +206,6 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
       }
     };
 
-    // Memasukkan prompt Teks dan Gambar sekaligus ke dalam AI
     const result = await model.generateContentStream([prompt, imagePart]);
 
     for await (const chunk of result.stream) {
@@ -164,9 +228,7 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
     console.log(`\n--- MEMULAI AI EVALUATOR STREAMING ---`);
     console.log(`Request: Evaluasi Esai | ${mapel} | ${topik}`);
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API Key Gemini tidak ditemukan.");
-
+    const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -209,18 +271,14 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
 // ============================================================================
 export async function* chatAssistantStream(history: {role: "user" | "model", parts: {text: string}[]}[], newMessage: string) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API Key Gemini tidak ditemukan.");
-
+    const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Memulai sesi chat dengan menyertakan riwayat percakapan sebelumnya
     const chat = model.startChat({
       history: history,
     });
 
-    // Mengirim pesan baru dengan instruksi sistem tersembunyi agar AI bertindak sebagai Asisten Guru
     const promptSistem = `Sebagai 'Asisten Syntax', jawab pesan ini dengan ramah, ringkas, dan fokus membantu guru terkait ide mengajar/pendidikan. Pesan: ${newMessage}`;
     
     const result = await chat.sendMessageStream(promptSistem);

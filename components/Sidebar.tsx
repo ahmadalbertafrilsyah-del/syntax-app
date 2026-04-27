@@ -6,10 +6,10 @@ import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-// Menangkap prop dari layout
 export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebarOpen?: boolean, setIsSidebarOpen?: (val: boolean) => void }) {
   const pathname = usePathname();
   const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -26,99 +26,107 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
       } else {
         setRole(null);
       }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
+  // === PENAMBAHAN MENU VISION & EVALUATOR DI SINI ===
   const menuItems = [
-    { name: "Ringkasan", path: "/guru", icon: "📊" },
-    { name: "Generator AI", path: "/guru/generator", icon: "✨" },
-    { name: "Koleksi Saya", path: "/guru/koleksi", icon: "📚" },
-    { name: "Vision AI", path: "/guru/vision", icon: "📸" },
-    { name: "Auto-Korektor", path: "/guru/evaluator", icon: "💯" },
+    { name: "Beranda", path: "/guru", icon: "🏠", mobileName: "Beranda" },
+    { name: "Generator AI", path: "/guru/generator", icon: "✨", mobileName: "Generate" },
+    { name: "Vision AI", path: "/guru/vision", icon: "📸", mobileName: "Vision" },
+    { name: "Auto-Korektor", path: "/guru/evaluator", icon: "💯", mobileName: "Koreksi" },
+    { name: "Koleksi", path: "/guru/koleksi", icon: "📚", mobileName: "Koleksi" },
+    { name: "Pengaturan", path: "/guru/pengaturan", icon: "⚙️", mobileName: "Profil" }, 
   ];
 
   const adminMenuItems = [
     { name: "Overview", path: "/admin", icon: "🔐" },
     { name: "Kelola Pengguna", path: "/admin/users", icon: "👥" },
     { name: "Kurikulum", path: "/admin/kurikulum", icon: "📚" },
+    { name: "Manajemen Koleksi", path: "/admin/koleksi", icon: "🗂️" }, 
+    { name: "API Keys", path: "/admin/apikeys", icon: "🔑" }, 
   ];
 
-  // Fungsi untuk menutup sidebar di HP saat menu diklik
   const handleMenuClick = () => {
     if (setIsSidebarOpen) setIsSidebarOpen(false);
   };
 
-  return (
-    <aside className={`bg-white border-r border-slate-200 flex flex-col h-screen fixed md:sticky top-0 z-50 transition-transform duration-300 w-64 shadow-2xl md:shadow-none ${
-      isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-    }`}>
-      <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-        <h2 className="text-2xl font-extrabold text-cyan-700 tracking-tight flex items-center gap-2">
-          <img src="https://i.ibb.co.com/J0jVHbG/Syntax-Icon.png" alt="Logo" className="w-6 h-6 object-contain" />
-          Syntax
-        </h2>
-        {/* Tombol Tutup (Hanya di Mobile) */}
-        <button onClick={handleMenuClick} className="md:hidden w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200 font-bold">
-          ✕
-        </button>
-      </div>
+  if (loading) return null;
 
-      <nav className="flex-1 p-4 space-y-6 overflow-y-auto pb-20 md:pb-4">
-        
-        <div>
-          <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Menu Utama</p>
-          <div className="space-y-1">
-            {menuItems.map((item) => {
-              const isActive = pathname === item.path;
-              return (
-                <Link 
-                  key={item.name} 
-                  href={item.path}
-                  onClick={handleMenuClick}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
-                    isActive 
-                      ? "bg-cyan-50 text-cyan-700 shadow-sm border border-cyan-100/50" 
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                  }`}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
+  return (
+    <>
+      {/* ========================================================= */}
+      {/* DESKTOP SIDEBAR (Sembunyi di HP, Muncul di Desktop/MD)      */}
+      {/* ========================================================= */}
+      <aside className={`hidden md:flex bg-white border-r border-slate-200 flex-col h-screen sticky top-0 z-50 w-64`}>
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-2xl font-extrabold text-indigo-600 tracking-tight flex items-center gap-2">
+            <img src="https://i.ibb.co.com/JjK2w93q/LOGO-SYNTAX.png" alt="Logo" className="w-6 h-6 object-contain" />
+            Syntax
+          </h2>
         </div>
 
-        {role === "admin" && (
-          <div>
-            <div className="px-4 flex items-center gap-2 mb-3 mt-6">
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Admin Panel</p>
-              <div className="h-px flex-1 bg-slate-100"></div>
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+          {role !== "admin" && (
+            <div>
+              <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Menu Utama</p>
+              <div className="space-y-1">
+                {menuItems.map((item) => {
+                  const isActive = pathname === item.path;
+                  return (
+                    <Link key={item.name} href={item.path} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${isActive ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>
+                      <span className="text-lg">{item.icon}</span> {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-            <div className="space-y-1">
-              {adminMenuItems.map((item) => {
-                const isActive = pathname === item.path;
-                return (
-                  <Link 
-                    key={item.name} 
-                    href={item.path}
-                    onClick={handleMenuClick}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
-                      isActive 
-                        ? "bg-slate-900 text-cyan-400 shadow-md" 
-                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                    }`}
-                  >
-                    <span className="text-lg">{item.icon}</span>
-                    {item.name}
-                  </Link>
-                );
-              })}
+          )}
+
+          {role === "admin" && (
+            <div>
+              <div className="px-4 flex items-center gap-2 mb-3">
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Admin Panel</p>
+                <div className="h-px flex-1 bg-slate-100"></div>
+              </div>
+              <div className="space-y-1">
+                {adminMenuItems.map((item) => {
+                  const isActive = pathname === item.path;
+                  return (
+                    <Link key={item.name} href={item.path} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${isActive ? "bg-slate-900 text-cyan-400 shadow-md" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}>
+                      <span className="text-lg">{item.icon}</span> {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
-      </nav>
-    </aside>
+          )}
+        </nav>
+      </aside>
+
+      {/* ========================================================= */}
+      {/* MOBILE BOTTOM NAVIGATION (Muncul di HP, Sembunyi di Desktop)*/}
+      {/* ========================================================= */}
+      {role !== "admin" && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 px-1 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+          {menuItems.map((item) => {
+            const isActive = pathname === item.path;
+            return (
+              <Link key={item.name} href={item.path} className="flex flex-col items-center justify-center w-full h-full space-y-1 active:scale-95 transition-transform">
+                <span className={`text-lg md:text-xl ${isActive ? 'grayscale-0 opacity-100 scale-110 transition-transform' : 'grayscale opacity-50'}`}>
+                  {item.icon}
+                </span>
+                {/* Menggunakan nama pendek khusus HP agar tidak berdesakan */}
+                <span className={`text-[9px] sm:text-[10px] font-bold ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
+                  {item.mobileName}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+    </>
   );
 }

@@ -12,25 +12,32 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 export default function GeneratorPage() {
-  const { user } = useAuth(); // Mengambil data user yang sedang login
+  const { user } = useAuth(); 
 
-  // State Form
-  const [sumber, setSumber] = useState("Kemendikbud Ristek"); // Kemendikbud atau Kemenag
+  // State Form Dasar
+  const [sumber, setSumber] = useState("Kemendikbud Ristek"); 
   const [tipe, setTipe] = useState("Modul Ajar (PPM)");
   const [fase, setFase] = useState("");
   const [mapel, setMapel] = useState("");
   const [topik, setTopik] = useState("");
   
+  // State Dinamis (Custom Fields)
+  const [metode, setMetode] = useState("");
+  const [customMetode, setCustomMetode] = useState("");
+  const [alokasiWaktu, setAlokasiWaktu] = useState("");
+  const [tahunPelajaran, setTahunPelajaran] = useState("");
+  const [semester, setSemester] = useState("Ganjil");
+  const [jumlahPG, setJumlahPG] = useState("10");
+  const [jumlahEsai, setJumlahEsai] = useState("5");
+  const [jenisTugas, setJenisTugas] = useState("");
+  
   // State UI
   const [isLoading, setIsLoading] = useState(false);
   const [hasil, setHasil] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false); // Penanda saat teks sedang mengetik
+  const [isStreaming, setIsStreaming] = useState(false); 
 
-  // FUNGSI HANDLE GENERATE (SUDAH MENDUKUNG REAL-TIME STREAMING)
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Keamanan: Pastikan user sudah login sebelum memanggil AI
     if (!user) {
       alert("Sesi Anda telah berakhir. Silakan login kembali.");
       return;
@@ -38,25 +45,49 @@ export default function GeneratorPage() {
 
     setIsLoading(true);
     setIsStreaming(true);
-    setHasil(""); // Kosongkan kanvas sebelum mulai
-    let teksLengkap = ""; // Variabel sementara penyimpan teks utuh
+    setHasil(""); 
+    let teksLengkap = ""; 
 
     try {
-      // 1. Memanggil Async Generator (Streaming AI)
-      const streamResult = await generatePerangkatAjar(tipe, fase, mapel, topik, sumber);
+      // PENYUSUNAN PAYLOAD DINAMIS BERDASARKAN JENIS DOKUMEN
+      let topikKirim = `Materi/Topik Utama: ${topik}\n\n**INSTRUKSI CUSTOM DARI GURU:**`;
       
-      // Matikan loading muter-muter karena teks akan segera keluar!
-      setIsLoading(false); 
-
-      // 2. Loop penangkap teks (Mengeluarkan kata demi kata ke layar)
-      for await (const chunk of streamResult) {
-        teksLengkap += chunk;
-        setHasil(teksLengkap); // Update layar secara real-time
+      if (tipe === "Modul Ajar (PPM)" || tipe === "RPP") {
+        if (metode !== "") {
+          const pilihanMetode = metode === "Lainnya (Custom)" ? customMetode : metode;
+          topikKirim += `\n- Strategi/Model Pengajaran: Wajib gunakan sintaks "${pilihanMetode}".`;
+        }
+        if (alokasiWaktu !== "") {
+          topikKirim += `\n- Alokasi Waktu: ${alokasiWaktu}.`;
+        }
+      } 
+      else if (tipe === "PROTA") {
+        if (tahunPelajaran !== "") topikKirim += `\n- Tahun Pelajaran: ${tahunPelajaran}.`;
+      }
+      else if (tipe === "PROMES") {
+        if (tahunPelajaran !== "") topikKirim += `\n- Tahun Pelajaran: ${tahunPelajaran}.`;
+        if (semester !== "") topikKirim += `\n- Semester: ${semester}.`;
+      }
+      else if (tipe === "Bank Soal") {
+        topikKirim += `\n- Ketentuan Soal: ABAIKAN aturan default, Anda WAJIB membuat tepat ${jumlahPG} soal Pilihan Ganda dan ${jumlahEsai} soal Esai.`;
+      }
+      else if (tipe === "Rubrik Penilaian") {
+        if (jenisTugas !== "") topikKirim += `\n- Jenis Tugas yang Dinilai: ${jenisTugas} (Sesuaikan kriteria rubrik dengan jenis tugas ini).`;
       }
 
-      // 3. Setelah streaming teks 100% SELESAI, simpan ke Firebase
+      // Memanggil AI Backend
+      const streamResult = await generatePerangkatAjar(tipe, fase, mapel, topikKirim, sumber);
+      setIsLoading(false); 
+
+      // Membaca Teks Streaming
+      for await (const chunk of streamResult) {
+        teksLengkap += chunk;
+        setHasil(teksLengkap); 
+      }
+
       setIsStreaming(false);
 
+      // Simpan Riwayat
       await addDoc(collection(db, "dokumen"), {
         id_user: user.uid,
         sumber: sumber,
@@ -64,209 +95,319 @@ export default function GeneratorPage() {
         fase: fase,
         mapel: mapel,
         topik: topik,
-        konten_ai: teksLengkap, // Menyimpan teks yang sudah utuh 100%
+        konten_ai: teksLengkap, 
         dibuat_pada: serverTimestamp(),
       });
 
-      // 4. Mengurangi Sisa Kuota Guru sebanyak 1 poin di Firestore
+      // Kurangi Kuota
       const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
-        sisa_kuota: increment(-1)
-      });
+      await updateDoc(userRef, { sisa_kuota: increment(-1) });
 
     } catch (error) {
       console.error("Error Generate:", error);
       setIsStreaming(false);
-      alert("Terjadi kesalahan saat memproses materi. Pastikan API Key valid dan kuota Anda mencukupi.");
+      alert("Terjadi kesalahan. Pastikan API Key valid dan kuota Anda mencukupi.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fungsi Copy Text
   const handleCopyText = () => {
     navigator.clipboard.writeText(hasil);
     alert("Teks berhasil disalin!");
   };
 
+  const isEvaluasi = tipe === "Bank Soal" || tipe === "Rubrik Penilaian";
+  const labelTopik = isEvaluasi 
+    ? "Bahan Evaluasi / Materi Ujian" 
+    : (tipe === "Modul Ajar (PPM)" || tipe === "RPP") 
+      ? "Topik Pembelajaran Utama" 
+      : "Capaian / Lingkup Materi";
+
+  const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-10">
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="max-w-6xl mx-auto pb-24 md:pb-10 px-4 md:px-6 pt-4 md:pt-6 space-y-6">
       
       {/* Header Halaman */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
-        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Ruang Racik AI ✨</h1>
-        <p className="text-slate-500 mt-2">Pilih referensi dan parameter di bawah ini, biarkan AI merancang perangkat ajar Anda.</p>
+      <motion.div variants={itemVariants} className="text-center md:text-left">
+        <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Ruang Racik AI ✨</h1>
+        <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium">Atur parameter di bawah ini, biarkan AI merancang perangkat ajar Anda.</p>
       </motion.div>
 
-      {/* TATA LETAK BARU: ATAS - FORM INPUT (LANDSCAPE) */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        className="w-full"
-      >
-        <form onSubmit={handleGenerate} className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-6">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* TATA LETAK ATAS-BAWAH (FLEX COLUMN FULL WIDTH) */}
+      <div className="flex flex-col gap-6 md:gap-8">
+        
+        {/* BAGIAN ATAS: FORMULIR FULL WIDTH */}
+        <motion.div variants={itemVariants} className="w-full">
+          <form onSubmit={handleGenerate} className="bg-white p-5 md:p-8 rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-5 md:gap-6">
             
-            {/* KIRI: Pengaturan Dasar */}
-            <div className="space-y-5">
-              {/* SUMBER KURIKULUM */}
+            {/* BARIS 1: SUMBER, FASE, MAPEL (Berjejer 3 Kolom di layar besar) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+              {/* Sumber Referensi */}
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Sumber Referensi Dasar</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["Kemendikbud Ristek", "Kementerian Agama"].map((item) => (
-                    <button
-                      key={item} type="button"
-                      onClick={() => setSumber(item)}
-                      className={`py-2 px-2 text-xs text-center rounded-xl font-bold transition-all ${
-                        sumber === item 
-                          ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-200 shadow-sm' 
-                          : 'bg-slate-50 text-slate-500 border-2 border-transparent hover:bg-slate-100'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* FASE & KELAS */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Fase / Kelas</label>
-                <select required value={fase} onChange={(e) => setFase(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm cursor-pointer">
-                  <option value="">Pilih Fase (Kurikulum Merdeka)</option>
-                  <option value="Fase A (Kelas 1-2 SD/MI)">Fase A (Kelas 1-2 SD/MI)</option>
-                  <option value="Fase B (Kelas 3-4 SD/MI)">Fase B (Kelas 3-4 SD/MI)</option>
-                  <option value="Fase C (Kelas 5-6 SD/MI)">Fase C (Kelas 5-6 SD/MI)</option>
-                  <option value="Fase D (Kelas 7-9 SMP/MTs)">Fase D (Kelas 7-9 SMP/MTs)</option>
-                  <option value="Fase E (Kelas 10 SMA/MA)">Fase E (Kelas 10 SMA/MA)</option>
-                  <option value="Fase F (Kelas 11-12 SMA/MA)">Fase F (Kelas 11-12 SMA/MA)</option>
-                </select>
-              </div>
-
-              {/* MATA PELAJARAN */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Mata Pelajaran</label>
-                <input required type="text" value={mapel} onChange={(e) => setMapel(e.target.value)} placeholder="Contoh: PAI, Matematika, IPA" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
-              </div>
-            </div>
-
-            {/* KANAN: Jenis Dokumen & Topik */}
-            <div className="lg:col-span-2 space-y-5 flex flex-col">
-              {/* JENIS PERANGKAT AJAR */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Jenis Perangkat Ajar</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    "Modul Ajar (PPM)", "RPP", 
-                    "Analisis TP", "Alur TP (ATP)", 
-                    "PROMES", "PROTA", 
-                    "Bank Soal", "Rubrik Penilaian"
-                  ].map((item) => (
-                    <button
-                      key={item} type="button"
-                      onClick={() => setTipe(item)}
-                      className={`py-2 px-2 text-xs text-center rounded-xl font-medium transition-all ${
-                        tipe === item 
-                          ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-200 shadow-sm' 
-                          : 'bg-slate-50 text-slate-600 border-2 border-transparent hover:bg-slate-100'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* TOPIK / MATERI */}
-              <div className="flex-1 flex flex-col">
-                <label className="block text-sm font-bold text-slate-700 mb-2">Topik / Materi Spesifik</label>
-                <textarea 
-                  required 
-                  value={topik} 
-                  onChange={(e) => setTopik(e.target.value)} 
-                  placeholder="Contoh: Sejarah Masuknya Islam di Nusantara, atau Teorema Pythagoras" 
-                  className="w-full flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm resize-none min-h-[120px]" 
-                />
-              </div>
-            </div>
-
-          </div>
-
-          {/* TOMBOL SUBMIT */}
-          <button type="submit" disabled={isLoading || isStreaming} className={`w-full py-4 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 mt-2 ${isLoading || isStreaming ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200'}`}>
-            {isLoading ? (
-              <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Menyambungkan AI...</>
-            ) : isStreaming ? (
-              <><div className="w-5 h-5 bg-white rounded-sm animate-pulse"></div> Sedang Mengetik...</>
-            ) : (
-              <>Generate Dokumen dengan AI ✨</>
-            )}
-          </button>
-        </form>
-      </motion.div>
-
-      {/* TATA LETAK BARU: BAWAH - PREVIEW HASIL */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        className="w-full flex flex-col"
-      >
-        <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm flex-1 min-h-[600px] flex flex-col relative overflow-hidden">
-          
-          {/* Header Preview */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 pb-4 mb-6 gap-4">
-            <h2 className="font-bold text-slate-800 flex items-center gap-2 text-xl">
-              <svg className="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              Dokumen Hasil
-            </h2>
-            {hasil && !isStreaming && (
-              <div className="flex gap-2">
-                <button onClick={handleCopyText} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-lg transition">Salin Seluruh Teks</button>
-                <button className="px-4 py-2 bg-indigo-50 text-indigo-600 text-sm font-bold rounded-lg cursor-not-allowed opacity-60" title="Dokumen sudah otomatis tersimpan">Tersimpan di Koleksi ✓</button>
-              </div>
-            )}
-          </div>
-
-          {/* Area Konten Dinamis */}
-          <div className="flex-1 overflow-y-auto">
-            <AnimatePresence mode="wait">
-              {isLoading ? (
-                // Animasi Loading Awal
-                <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 pt-32 pb-32">
-                  <div className="relative">
-                    <div className="w-16 h-16 border-4 border-indigo-100 rounded-full"></div>
-                    <div className="w-16 h-16 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl">✨</div>
+                <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2">Sumber Referensi Dasar</label>
+                <div className="relative">
+                  <select value={sumber} onChange={(e) => setSumber(e.target.value)} className="w-full p-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[13px] md:text-sm cursor-pointer font-medium text-slate-700 transition-all appearance-none shadow-sm">
+                    <option value="Kemendikbud Ristek">Kemendikbud Ristek</option>
+                    <option value="Kementerian Agama">Kementerian Agama</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </div>
-                  <p className="animate-pulse font-medium text-lg mt-4">Meracik kurikulum dengan AI...</p>
-                </motion.div>
-              ) : hasil ? (
-                // Menampilkan Teks Streaming
-                <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-indigo prose-sm md:prose-base lg:prose-lg max-w-none text-slate-700 px-2 relative pb-10">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {hasil}
-                  </ReactMarkdown>
-                  
-                  {/* Kursor Kedip saat Streaming */}
-                  {isStreaming && (
-                    <span className="inline-block w-2.5 h-5 ml-1 bg-slate-400 animate-pulse -mb-1"></span>
-                  )}
-                </motion.div>
-              ) : (
-                // Keadaan Awal Kosong
-                <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-slate-400 pt-32 pb-32 text-center px-4">
-                  <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 text-5xl">📄</div>
-                  <h3 className="font-bold text-slate-600 mb-2 text-xl">Kanvas Masih Kosong</h3>
-                  <p className="text-base max-w-md">Silakan isi referensi dan parameter di atas, lalu klik tombol <b>Generate</b> untuk memulai pembuatan dokumen.</p>
-                </motion.div>
+                </div>
+              </div>
+
+              {/* Fase / Kelas */}
+              <div>
+                <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2">Fase / Kelas</label>
+                <div className="relative">
+                  <select required value={fase} onChange={(e) => setFase(e.target.value)} className="w-full p-3.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[13px] md:text-sm cursor-pointer font-medium text-slate-700 transition-all appearance-none shadow-sm">
+                    <option value="">Pilih Fase</option>
+                    <option value="Fase A (Kelas 1-2 SD/MI)">Fase A (Kelas 1-2)</option>
+                    <option value="Fase B (Kelas 3-4 SD/MI)">Fase B (Kelas 3-4)</option>
+                    <option value="Fase C (Kelas 5-6 SD/MI)">Fase C (Kelas 5-6)</option>
+                    <option value="Fase D (Kelas 7-9 SMP/MTs)">Fase D (Kelas 7-9)</option>
+                    <option value="Fase E (Kelas 10 SMA/MA)">Fase E (Kelas 10)</option>
+                    <option value="Fase F (Kelas 11-12 SMA/MA)">Fase F (Kelas 11-12)</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mata Pelajaran */}
+              <div>
+                <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2">Mata Pelajaran</label>
+                <input required type="text" value={mapel} onChange={(e) => setMapel(e.target.value)} placeholder="Contoh: Biologi" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[13px] md:text-sm font-medium text-slate-700 transition-all shadow-sm" />
+              </div>
+            </div>
+
+            <div className="h-px w-full bg-slate-100 hidden md:block my-1"></div>
+
+            {/* BARIS 2: JENIS PERANGKAT */}
+            <div>
+              <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2.5">Jenis Perangkat Ajar</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2.5">
+                {[
+                  "Modul Ajar (PPM)", "RPP", "Analisis TP", "Alur TP (ATP)", 
+                  "PROMES", "PROTA", "Bank Soal", "Rubrik Penilaian"
+                ].map((item) => (
+                  <button
+                    key={item} type="button" onClick={() => setTipe(item)}
+                    className={`py-3 px-2 text-[11px] xl:text-[12px] leading-tight text-center rounded-xl font-bold transition-all border shadow-sm active:scale-95 flex items-center justify-center ${
+                      tipe === item 
+                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200 ring-1 ring-indigo-100' 
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ======================================================== */}
+            {/* AREA DYNAMIC CUSTOM FIELDS BERDASARKAN JENIS PERANGKAT   */}
+            {/* ======================================================== */}
+            <div className="overflow-hidden -mx-2 px-2 -mb-2 pb-2">
+              <AnimatePresence mode="wait">
+                
+                {/* 1. CUSTOM: MODUL AJAR & RPP */}
+                {(tipe === "Modul Ajar (PPM)" || tipe === "RPP") && (
+                  <motion.div key="modul" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pt-2">
+                    {/* INI KUNCINYA: Grid otomatis berubah dari 2 kolom menjadi 3 kolom jika "Custom" dipilih */}
+                    <div className={`grid grid-cols-1 ${metode === "Lainnya (Custom)" ? "md:grid-cols-3" : "md:grid-cols-2"} gap-4 bg-emerald-50/30 p-4 rounded-2xl border border-emerald-100 transition-all`}>
+                      
+                      {/* Kotak Pilihan Strategi */}
+                      <div>
+                        <label className="block text-[12px] md:text-[13px] font-bold text-emerald-700 mb-2 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                          Strategi Pengajaran
+                        </label>
+                        <div className="relative">
+                          <select value={metode} onChange={(e) => setMetode(e.target.value)} className="w-full p-3.5 pr-10 bg-white border border-emerald-200 text-emerald-800 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-[13px] md:text-sm cursor-pointer font-bold transition-all appearance-none shadow-sm">
+                            <option value="">Bebaskan AI menentukan</option>
+                            <option value="Problem Based Learning (PBL)">Problem Based Learning (PBL)</option>
+                            <option value="Project Based Learning (PjBL)">Project Based Learning (PjBL)</option>
+                            <option value="Discovery Learning">Discovery Learning</option>
+                            <option value="Inquiry Learning">Inquiry Learning</option>
+                            <option value="Lainnya (Custom)">💡 Lainnya (Custom Ide Sendiri...)</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-emerald-600"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></div>
+                        </div>
+                      </div>
+
+                      {/* Kotak Ketik Custom (Hanya muncul jika dipilih) */}
+                      {metode === "Lainnya (Custom)" && (
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                          <label className="block text-[12px] md:text-[13px] font-bold text-emerald-700 mb-2">Ketik Model Anda</label>
+                          <input type="text" required value={customMetode} onChange={(e) => setCustomMetode(e.target.value)} placeholder="Misal: Role Playing..." className="w-full p-3.5 bg-white border border-emerald-200 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-[13px] md:text-sm font-medium text-slate-700 transition-all shadow-sm" />
+                        </motion.div>
+                      )}
+
+                      {/* Kotak Alokasi Waktu (Selalu Muncul) */}
+                      <div>
+                        <label className="block text-[12px] md:text-[13px] font-bold text-emerald-700 mb-2 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          Alokasi Waktu
+                        </label>
+                        <input type="text" value={alokasiWaktu} onChange={(e) => setAlokasiWaktu(e.target.value)} placeholder="Misal: 2 JP x 45 Menit" className="w-full p-3.5 bg-white border border-emerald-200 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-[13px] md:text-sm font-medium text-slate-700 transition-all shadow-sm" />
+                      </div>
+
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 2. CUSTOM: PROTA & PROMES */}
+                {(tipe === "PROTA" || tipe === "PROMES") && (
+                  <motion.div key="prota" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-amber-50/30 p-4 rounded-2xl border border-amber-100">
+                      <div>
+                        <label className="block text-[12px] md:text-[13px] font-bold text-amber-700 mb-2 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          Tahun Pelajaran
+                        </label>
+                        <input type="text" value={tahunPelajaran} onChange={(e) => setTahunPelajaran(e.target.value)} placeholder="Misal: 2026/2027" className="w-full p-3.5 bg-white border border-amber-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none text-[13px] md:text-sm font-bold text-slate-700 transition-all shadow-sm" />
+                      </div>
+                      
+                      {tipe === "PROMES" && (
+                        <div>
+                          <label className="block text-[12px] md:text-[13px] font-bold text-amber-700 mb-2">Semester</label>
+                          <div className="relative">
+                            <select value={semester} onChange={(e) => setSemester(e.target.value)} className="w-full p-3.5 pr-10 bg-white border border-amber-200 text-amber-800 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none text-[13px] md:text-sm cursor-pointer font-bold transition-all appearance-none shadow-sm">
+                              <option value="Ganjil">Semester Ganjil</option>
+                              <option value="Genap">Semester Genap</option>
+                            </select>
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-amber-600"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 3. CUSTOM: BANK SOAL */}
+                {tipe === "Bank Soal" && (
+                  <motion.div key="soal" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pt-2">
+                    <div className="grid grid-cols-2 gap-4 bg-rose-50/30 p-4 rounded-2xl border border-rose-100">
+                      <div>
+                        <label className="block text-[12px] md:text-[13px] font-bold text-rose-700 mb-2 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                          Soal Pilihan Ganda
+                        </label>
+                        <input type="number" min="0" max="50" value={jumlahPG} onChange={(e) => setJumlahPG(e.target.value)} className="w-full p-3.5 bg-white border border-rose-200 rounded-xl focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none text-[13px] md:text-sm font-bold text-slate-700 transition-all shadow-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-[12px] md:text-[13px] font-bold text-rose-700 mb-2">Soal Esai (HOTS)</label>
+                        <input type="number" min="0" max="20" value={jumlahEsai} onChange={(e) => setJumlahEsai(e.target.value)} className="w-full p-3.5 bg-white border border-rose-200 rounded-xl focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none text-[13px] md:text-sm font-bold text-slate-700 transition-all shadow-sm" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 4. CUSTOM: RUBRIK */}
+                {tipe === "Rubrik Penilaian" && (
+                  <motion.div key="rubrik" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pt-2">
+                    <div className="bg-purple-50/30 p-4 rounded-2xl border border-purple-100">
+                      <label className="block text-[12px] md:text-[13px] font-bold text-purple-700 mb-2 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                        Jenis Tugas yang Dinilai
+                      </label>
+                      <input type="text" value={jenisTugas} onChange={(e) => setJenisTugas(e.target.value)} placeholder="Contoh: Makalah, Presentasi Kelompok, Poster, Jurnal..." className="w-full p-3.5 bg-white border border-purple-200 rounded-xl focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none text-[13px] md:text-sm font-medium text-slate-700 transition-all shadow-sm" />
+                    </div>
+                  </motion.div>
+                )}
+
+              </AnimatePresence>
+            </div>
+
+            {/* BARIS 4: TOPIK & SUBMIT */}
+            <div className="flex flex-col pt-2">
+              <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2 flex justify-between items-center">
+                {labelTopik}
+              </label>
+              <textarea 
+                required value={topik} onChange={(e) => setTopik(e.target.value)} 
+                placeholder={isEvaluasi ? "Materi Fotosintesis, buat soal HOTS..." : "Ketik ringkasan capaian atau materi yang ingin Anda ajarkan..."} 
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[13px] md:text-sm resize-none min-h-[100px] md:min-h-[120px] font-medium text-slate-700 transition-all leading-relaxed shadow-sm mb-5" 
+              />
+
+              <button type="submit" disabled={isLoading || isStreaming} className={`w-full md:w-auto self-end px-8 py-3.5 md:py-4 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-md text-[14px] md:text-[15px] ${isLoading || isStreaming ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-200'}`}>
+                {isLoading ? (
+                  <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Menganalisis...</>
+                ) : isStreaming ? (
+                  <><div className="flex gap-1"><div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"></div><div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{animationDelay:"0.1s"}}></div><div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{animationDelay:"0.2s"}}></div></div> Sedang Menulis...</>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                    Generate {isEvaluasi ? "Evaluasi" : "Perangkat Ajar"}
+                  </>
+                )}
+              </button>
+            </div>
+
+          </form>
+        </motion.div>
+
+        {/* BAGIAN BAWAH: PREVIEW HASIL */}
+        <motion.div variants={itemVariants} className="w-full flex flex-col min-h-[500px] lg:h-[800px]">
+          <div className="bg-white rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm flex-1 flex flex-col relative overflow-hidden">
+            
+            <div className="flex items-center justify-between px-5 md:px-8 py-4 md:py-5 border-b border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 md:w-12 md:h-12 bg-indigo-100 text-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center">
+                  <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <div>
+                  <h2 className="font-bold text-slate-800 text-base md:text-xl leading-tight">Dokumen Hasil</h2>
+                  <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-0.5">Siap disalin dan dipindahkan ke Word</p>
+                </div>
+              </div>
+              
+              {hasil && !isStreaming && (
+                <button onClick={handleCopyText} className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[12px] md:text-sm font-bold rounded-xl transition flex items-center gap-2 active:scale-95">
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                  <span className="hidden sm:inline">Salin Teks</span>
+                </button>
               )}
-            </AnimatePresence>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-white p-5 md:p-8">
+              <AnimatePresence mode="wait">
+                {isLoading ? (
+                  <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col items-center justify-center text-slate-400 py-20">
+                    <div className="relative mb-6">
+                      <div className="w-16 h-16 md:w-20 md:h-20 border-4 border-indigo-50 rounded-full"></div>
+                      <div className="w-16 h-16 md:w-20 md:h-20 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl md:text-2xl">🪄</div>
+                    </div>
+                    <p className="font-bold text-slate-600 text-sm md:text-base">Menganalisis Kurikulum</p>
+                    <p className="text-[12px] md:text-sm mt-1">Sistem AI sedang meramu struktur yang tepat...</p>
+                  </motion.div>
+                ) : hasil ? (
+                  <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-sm md:prose-base prose-indigo max-w-none text-slate-700 pb-10 px-2 md:px-6">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {hasil}
+                    </ReactMarkdown>
+                    {isStreaming && <span className="inline-block w-2 md:w-2.5 h-4 md:h-5 ml-1 bg-slate-400 animate-pulse align-middle"></span>}
+                  </motion.div>
+                ) : (
+                  <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-20">
+                    <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center mb-5 md:mb-6 text-3xl md:text-4xl shadow-inner">📄</div>
+                    <h3 className="font-bold text-slate-600 text-base md:text-lg">Kanvas Masih Kosong</h3>
+                    <p className="text-[13px] md:text-sm max-w-[250px] md:max-w-xs mt-2">Pilih parameter di atas lalu tekan tombol Generate untuk memunculkan materi di sini.</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
           </div>
+        </motion.div>
 
-        </div>
-      </motion.div>
-
-    </div>
+      </div>
+    </motion.div>
   );
 }
