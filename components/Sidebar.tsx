@@ -31,7 +31,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
     return () => unsubscribe();
   }, []);
 
-  // === PENAMBAHAN MENU VISION & EVALUATOR DI SINI ===
+  // MENU GURU
   const menuItems = [
     { name: "Beranda", path: "/guru", icon: "🏠", mobileName: "Beranda" },
     { name: "Generator AI", path: "/guru/generator", icon: "✨", mobileName: "Generate" },
@@ -41,12 +41,14 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
     { name: "Pengaturan", path: "/guru/pengaturan", icon: "⚙️", mobileName: "Profil" }, 
   ];
 
+  // MENU ADMIN (Menu Pengaturan Telah Ditambahkan!)
   const adminMenuItems = [
-    { name: "Overview", path: "/admin", icon: "🔐" },
-    { name: "Kelola Pengguna", path: "/admin/users", icon: "👥" },
-    { name: "Kurikulum", path: "/admin/kurikulum", icon: "📚" },
-    { name: "Manajemen Koleksi", path: "/admin/koleksi", icon: "🗂️" }, 
-    { name: "API Keys", path: "/admin/apikeys", icon: "🔑" }, 
+    { name: "Overview", path: "/admin", icon: "🔐", mobileName: "Overview" },
+    { name: "Kelola Pengguna", path: "/admin/users", icon: "👥", mobileName: "Pengguna" },
+    { name: "Kurikulum", path: "/admin/kurikulum", icon: "📚", mobileName: "Kurikulum" },
+    { name: "Manajemen Koleksi", path: "/admin/koleksi", icon: "🗂️", mobileName: "Koleksi" }, 
+    { name: "API Keys", path: "/admin/apikeys", icon: "🔑", mobileName: "API Keys" }, 
+    { name: "Pengaturan", path: "/admin/pengaturan", icon: "⚙️", mobileName: "Profil" }, 
   ];
 
   const handleMenuClick = () => {
@@ -54,6 +56,9 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
   };
 
   if (loading) return null;
+
+  // Menentukan menu mana yang dipakai berdasarkan Role
+  const currentMenuItems = role === "admin" ? adminMenuItems : menuItems;
 
   return (
     <>
@@ -68,7 +73,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
           </h2>
         </div>
 
-        <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto custom-scrollbar">
           {role !== "admin" && (
             <div>
               <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Menu Utama</p>
@@ -107,26 +112,27 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
       </aside>
 
       {/* ========================================================= */}
-      {/* MOBILE BOTTOM NAVIGATION (Muncul di HP, Sembunyi di Desktop)*/}
+      {/* MOBILE BOTTOM NAVIGATION (Kini Muncul untuk GURU & ADMIN)   */}
       {/* ========================================================= */}
-      {role !== "admin" && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 px-1 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.path;
-            return (
-              <Link key={item.name} href={item.path} className="flex flex-col items-center justify-center w-full h-full space-y-1 active:scale-95 transition-transform">
-                <span className={`text-lg md:text-xl ${isActive ? 'grayscale-0 opacity-100 scale-110 transition-transform' : 'grayscale opacity-50'}`}>
-                  {item.icon}
-                </span>
-                {/* Menggunakan nama pendek khusus HP agar tidak berdesakan */}
-                <span className={`text-[9px] sm:text-[10px] font-bold ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
-                  {item.mobileName}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 px-1 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)] overflow-x-auto custom-scrollbar">
+        {currentMenuItems.map((item) => {
+          const isActive = pathname === item.path;
+          return (
+            <Link key={item.name} href={item.path} className="flex flex-col items-center justify-center w-full h-full min-w-[60px] space-y-1 active:scale-95 transition-transform shrink-0">
+              <span className={`text-lg sm:text-xl ${isActive ? 'grayscale-0 opacity-100 scale-110 transition-transform' : 'grayscale opacity-50'}`}>
+                {item.icon}
+              </span>
+              <span className={`text-[9px] sm:text-[10px] font-bold truncate px-1 max-w-full ${
+                isActive 
+                  ? (role === 'admin' ? 'text-slate-800' : 'text-indigo-600') 
+                  : 'text-slate-400'
+              }`}>
+                {item.mobileName}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
     </>
   );
 }

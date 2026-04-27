@@ -1,40 +1,57 @@
 "use client";
 
+import AdminHeader from "@/components/AdminHeader";
 import { useAuth } from "@/lib/AuthContext";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const checkAdmin = async () => {
-      if (!loading && user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists() && userDoc.data().role === "admin") {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-          router.push("/guru"); // Jika bukan admin, lempar ke dashboard guru
-        }
-      } else if (!loading && !user) {
+    if (!loading) {
+      if (!user) {
         router.push("/login");
+      } else {
+        const checkAdmin = async () => {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().role === "admin") {
+            setIsAdmin(true);
+          } else {
+            router.push("/guru"); // Tendang ke dashboard guru jika bukan admin
+          }
+        };
+        checkAdmin();
       }
-    };
-    checkAdmin();
+    }
   }, [user, loading, router]);
 
   if (loading || isAdmin === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex items-center justify-center h-screen bg-slate-50">
         <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  // KITA HAPUS PEMANGGILAN <Sidebar /> DI SINI
+  // Karena komponen Sidebar sudah disediakan oleh parent layout (dashboard/layout.tsx)
+  return (
+    <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0 bg-slate-50/50 min-h-screen">
+      
+      {/* HEADER ADMIN BARU */}
+      <AdminHeader />
+
+      {/* AREA KONTEN UTAMA */}
+      <main className="flex-1 overflow-y-auto">
+        {children}
+      </main>
+
+    </div>
+  );
 }

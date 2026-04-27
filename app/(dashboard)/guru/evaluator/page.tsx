@@ -85,7 +85,7 @@ export default function EvaluatorPage() {
       {/* Header Halaman */}
       <motion.div variants={itemVariants} className="text-center md:text-left">
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-2">
-          Auto-Korektor AI <span className="text-3xl">💯</span>
+          Auto-Korektor<span className="text-3xl"></span>
         </h1>
         <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium max-w-3xl">
           Bandingkan jawaban esai siswa dengan kunci jawaban ideal Anda. AI akan memberikan skor objektif dan umpan balik yang membangun.

@@ -16,7 +16,6 @@ async function getActiveApiKey(): Promise<string> {
       const activeId = data.activeKeyId;
       const keysArray = data.keys || [];
       
-      // Cari key yang id-nya cocok dengan activeId
       const activeKeyObj = keysArray.find((k: any) => k.id === activeId);
       
       if (activeKeyObj && activeKeyObj.value) {
@@ -28,13 +27,40 @@ async function getActiveApiKey(): Promise<string> {
     console.error("⚠️ Gagal membaca API Key dari Firebase, mencoba fallback ke .env...", error);
   }
 
-  // FALLBACK: Jika tidak ada di database, gunakan yang ada di .env Vercel/Lokal
   const fallbackKey = process.env.GEMINI_API_KEY;
   if (!fallbackKey) {
     throw new Error("API Key Gemini tidak ditemukan di Database maupun di .env. Hubungi Admin.");
   }
   console.log("🔑 Menggunakan API Key dari .env (Fallback)");
   return fallbackKey;
+}
+
+// ============================================================================
+// FUNGSI INTERNAL: Mengambil Prompt/Instruksi dari Manajemen Kurikulum Admin
+// ============================================================================
+async function getAdminPrompt(tipeDokumen: string): Promise<string | null> {
+  let docId = "";
+  if (tipeDokumen.includes("Modul")) docId = "modul_ajar";
+  else if (tipeDokumen.includes("RPP")) docId = "rpp";
+  else if (tipeDokumen.includes("Alur TP") || tipeDokumen.includes("ATP")) docId = "alur_tp";
+  else if (tipeDokumen.includes("PROTA")) docId = "prota";
+  else if (tipeDokumen.includes("PROMES")) docId = "promes";
+  else if (tipeDokumen.includes("Soal")) docId = "bank_soal";
+  else if (tipeDokumen.includes("Rubrik")) docId = "rubrik";
+  else return null;
+
+  try {
+    const docRef = doc(db, "kurikulum_prompts", docId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists() && docSnap.data().prompt) {
+      console.log(`📑 Menggunakan instruksi AI khusus Admin untuk: ${tipeDokumen}`);
+      return docSnap.data().prompt;
+    }
+  } catch (error) {
+    console.error("⚠️ Gagal membaca prompt kurikulum admin:", error);
+  }
+  return null;
 }
 
 // ============================================================================
@@ -68,96 +94,103 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
       console.log("⚠️ Menggunakan database pengetahuan bawaan AI...");
     }
 
-    // 2. MENYUSUN INSTRUKSI KHUSUS SESUAI STANDAR BAKU DARI ADMIN
-    let instruksiSistem = "";
-    
-    // Logika Karakter Siswa berdasarkan Kementerian
+    // 2. CEK INSTRUKSI ADMIN DI FIREBASE TERLEBIH DAHULU
+    let instruksiSistem = await getAdminPrompt(tipe);
+
+    // Profil Pelajar Dinamis
     const profilPelajar = sumber === "Kementerian Agama" 
       ? "Profil Pelajar Pancasila (P5) dan nilai-nilai Profil Pelajar Rahmatan Lil 'Alamin (PPRA)" 
       : "Profil Pelajar Pancasila (P5)";
 
-    if (tipe === "PROTA") {
-      instruksiSistem += `\n- FORMAT WAJIB PROTA (Program Tahunan):
-        Buat gambaran umum alokasi waktu 1 tahun. Wajib memuat:
-        1. Identitas: Mata pelajaran, satuan pendidikan, fase/kelas, tahun pelajaran.
-        2. Capaian Pembelajaran (CP): Target kompetensi di akhir fase.
-        3. Daftar Materi/Tujuan Pembelajaran (TP): Rincian materi pokok.
-        4. Alokasi Waktu (JP): Total Jam Pelajaran untuk setiap TP selama satu tahun.`;
-    } 
-    else if (tipe === "PROMES") {
-      instruksiSistem += `\n- FORMAT WAJIB PROMES / PROSEM (Program Semester):
-        Buat dalam format matriks/tabel. Wajib memuat:
-        1. Identitas: Mata pelajaran, kelas, semester, tahun pelajaran.
-        2. Daftar Tujuan Pembelajaran (TP) & Materi Pokok.
-        3. Alokasi Waktu Total: Jam pelajaran per materi.
-        4. Distribusi Waktu: Matriks/tabel pemetaan materi ke minggu ke-1, ke-2, dst. pada setiap bulan dalam semester tersebut.
-        5. Keterangan: Penanda untuk masa ujian, hari libur, dll.`;
-    } 
-    else if (tipe === "Analisis TP") {
-      instruksiSistem += `\n- FORMAT WAJIB ANALISIS TP:
-        Bedah CP menjadi TP yang spesifik. Wajib memuat:
-        1. Elemen CP: Bagian spesifik dari CP.
-        2. Kompetensi (Kata Kerja): Keterampilan yang harus dikuasai (misal: menganalisis, merancang).
-        3. Lingkup Materi: Konten/ilmu pengetahuan utama.
-        4. Rumusan TP: Kalimat gabungan antara kompetensi dan lingkup materi.`;
-    } 
-    else if (tipe === "Alur TP (ATP)") {
-      instruksiSistem += `\n- FORMAT WAJIB ATP (Alur Tujuan Pembelajaran):
-        Wajib memuat:
-        1. Identitas Lengkap.
-        2. Urutan Tujuan Pembelajaran (TP): Susun logis dari yang paling dasar hingga paling kompleks.
-        3. Alokasi Waktu: Estimasi JP untuk tiap TP.
-        4. Profil Pelajar: Cantumkan dimensi ${profilPelajar} yang relevan pada tiap TP.`;
-    } 
-    else if (tipe === "Modul Ajar (PPM)") {
-      instruksiSistem += `\n- FORMAT WAJIB MODUL AJAR:
-        Wajib memuat 3 komponen utama:
-        1. Informasi Umum: Identitas, Kompetensi Awal, Sarpras, Target Peserta Didik, dan integrasi ${profilPelajar}.
-        2. Komponen Inti: Tujuan, Pemahaman Bermakna, Pertanyaan Pemantik, Langkah Pembelajaran (Pendahuluan, Inti, Penutup), dan Rencana Asesmen.
-        3. Lampiran: Contoh LKPD, Bahan Bacaan, Glosarium, Daftar Pustaka.`;
-    } 
-    else if (tipe === "RPP") {
-      instruksiSistem += `\n- FORMAT WAJIB RPP:
-        Wajib memuat:
-        1. Identitas: Kelas, mata pelajaran, alokasi waktu.
-        2. Tujuan Pembelajaran (TP).
-        3. Langkah-langkah Pembelajaran: Urutan kegiatan (pembukaan, inti, penutup).
-        4. Penilaian (Asesmen): Cara menilai ketercapaian tujuan.`;
-    } 
-    else if (tipe === "Bank Soal") {
-      instruksiSistem += `\n- FORMAT WAJIB BANK SOAL:
-        Wajib memuat:
-        1. Kisi-kisi Soal: Pemetaan TP, indikator soal, bentuk soal, dan tingkat kesukaran (C1-C6).
-        2. Kumpulan Butir Soal: Sediakan ragam instrumen (Pilihan Ganda, Isian Singkat, Esai) dalam jumlah yang banyak/fleksibel.
-        3. Kunci Jawaban.`;
-    } 
-    else if (tipe === "Rubrik Penilaian") {
-      instruksiSistem += `\n- FORMAT WAJIB RUBRIK PENILAIAN:
-        Buat panduan scoring dalam bentuk tabel. Wajib memuat:
-        1. Aspek/Kriteria yang Dinilai (misal: keakuratan konten, kreativitas).
-        2. Skala Capaian: Gunakan skala "Mulai Berkembang", "Layak", "Cakap", "Mahir".
-        3. Deskripsi Indikator: Penjelasan spesifik pada setiap skala (Contoh: Mendapat Mahir JIKA mampu menjelaskan konsep dengan benar tanpa bantuan).`;
+    // JIKA ADMIN BELUM MENGISI PROMPT, GUNAKAN FALLBACK (KODINGAN LAMA ANDA)
+    if (!instruksiSistem) {
+      console.log(`ℹ️ Menggunakan instruksi default (fallback) untuk: ${tipe}`);
+      instruksiSistem = ""; // Reset string
+      
+      if (tipe === "PROTA") {
+        instruksiSistem = `- FORMAT WAJIB PROTA (Program Tahunan):
+          Buat gambaran umum alokasi waktu 1 tahun. Wajib memuat:
+          1. Identitas: Mata pelajaran, satuan pendidikan, fase/kelas, tahun pelajaran.
+          2. Capaian Pembelajaran (CP): Target kompetensi di akhir fase.
+          3. Daftar Materi/Tujuan Pembelajaran (TP): Rincian materi pokok.
+          4. Alokasi Waktu (JP): Total Jam Pelajaran untuk setiap TP selama satu tahun.`;
+      } 
+      else if (tipe === "PROMES") {
+        instruksiSistem = `- FORMAT WAJIB PROMES / PROSEM (Program Semester):
+          Buat dalam format matriks/tabel. Wajib memuat:
+          1. Identitas: Mata pelajaran, kelas, semester, tahun pelajaran.
+          2. Daftar Tujuan Pembelajaran (TP) & Materi Pokok.
+          3. Alokasi Waktu Total: Jam pelajaran per materi.
+          4. Distribusi Waktu: Matriks/tabel pemetaan materi ke minggu ke-1, ke-2, dst. pada setiap bulan dalam semester tersebut.
+          5. Keterangan: Penanda untuk masa ujian, hari libur, dll.`;
+      } 
+      else if (tipe === "Analisis TP") {
+        instruksiSistem = `- FORMAT WAJIB ANALISIS TP:
+          Bedah CP menjadi TP yang spesifik. Wajib memuat:
+          1. Elemen CP: Bagian spesifik dari CP.
+          2. Kompetensi (Kata Kerja): Keterampilan yang harus dikuasai (misal: menganalisis, merancang).
+          3. Lingkup Materi: Konten/ilmu pengetahuan utama.
+          4. Rumusan TP: Kalimat gabungan antara kompetensi dan lingkup materi.`;
+      } 
+      else if (tipe === "Alur TP (ATP)") {
+        instruksiSistem = `- FORMAT WAJIB ATP (Alur Tujuan Pembelajaran):
+          Wajib memuat:
+          1. Identitas Lengkap.
+          2. Urutan Tujuan Pembelajaran (TP): Susun logis dari yang paling dasar hingga paling kompleks.
+          3. Alokasi Waktu: Estimasi JP untuk tiap TP.
+          4. Profil Pelajar: Cantumkan dimensi ${profilPelajar} yang relevan pada tiap TP.`;
+      } 
+      else if (tipe === "Modul Ajar (PPM)") {
+        instruksiSistem = `- FORMAT WAJIB MODUL AJAR:
+          Wajib memuat 3 komponen utama:
+          1. Informasi Umum: Identitas, Kompetensi Awal, Sarpras, Target Peserta Didik, dan integrasi ${profilPelajar}.
+          2. Komponen Inti: Tujuan, Pemahaman Bermakna, Pertanyaan Pemantik, Langkah Pembelajaran (Pendahuluan, Inti, Penutup), dan Rencana Asesmen.
+          3. Lampiran: Contoh LKPD, Bahan Bacaan, Glosarium, Daftar Pustaka.`;
+      } 
+      else if (tipe === "RPP") {
+        instruksiSistem = `- FORMAT WAJIB RPP:
+          Wajib memuat:
+          1. Identitas: Kelas, mata pelajaran, alokasi waktu.
+          2. Tujuan Pembelajaran (TP).
+          3. Langkah-langkah Pembelajaran: Urutan kegiatan (pembukaan, inti, penutup).
+          4. Penilaian (Asesmen): Cara menilai ketercapaian tujuan.`;
+      } 
+      else if (tipe === "Bank Soal") {
+        instruksiSistem = `- FORMAT WAJIB BANK SOAL:
+          Wajib memuat:
+          1. Kisi-kisi Soal: Pemetaan TP, indikator soal, bentuk soal, dan tingkat kesukaran (C1-C6).
+          2. Kumpulan Butir Soal: Sediakan ragam instrumen (Pilihan Ganda, Isian Singkat, Esai) dalam jumlah yang banyak/fleksibel.
+          3. Kunci Jawaban.`;
+      } 
+      else if (tipe === "Rubrik Penilaian") {
+        instruksiSistem = `- FORMAT WAJIB RUBRIK PENILAIAN:
+          Buat panduan scoring dalam bentuk tabel. Wajib memuat:
+          1. Aspek/Kriteria yang Dinilai (misal: keakuratan konten, kreativitas).
+          2. Skala Capaian: Gunakan skala "Mulai Berkembang", "Layak", "Cakap", "Mahir".
+          3. Deskripsi Indikator: Penjelasan spesifik pada setiap skala.`;
+      }
     }
 
     // 3. PROSES GENERASI AI (MODE STREAMING)
-    console.log("Menghubungi Google Gemini...");
+    console.log("Menghubungi Google Gemini 2.5 Flash...");
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
       Anda adalah pakar kurikulum dan ahli pendidikan profesional di Indonesia.
       Tugas utama Anda: Buat dokumen "${tipe}" untuk mata pelajaran "${mapel}" pada jenjang "${fase}".
+      Integrasi Profil Pelajar Wajib: ${profilPelajar}
 
-      INFORMASI MATERI / TOPIK / INSTRUKSI KHUSUS:
+      INFORMASI MATERI / TOPIK / INSTRUKSI DARI GURU:
       "${topik}"
 
       REFERENSI KURIKULUM DASAR:
       ${konteksKurikulum}
 
-      ATURAN BAKU & FORMAT (WAJIB DIPATUHI 100%):
+      ATURAN BAKU & FORMAT PEMBUATAN (WAJIB DIPATUHI 100%):
       ${instruksiSistem}
 
       - Tuliskan dalam format Markdown yang sangat rapi dan profesional. 
-      - Gunakan format tabel Markdown jika struktur dokumen tersebut lebih mudah dibaca dalam bentuk tabel (seperti pada PROMES, Kisi-kisi, atau Rubrik).
+      - Gunakan format tabel Markdown jika struktur dokumen tersebut lebih mudah dibaca dalam bentuk tabel.
       - Jangan berikan kalimat pengantar (seperti "Berikut adalah dokumennya..."). Langsung tuliskan Judul Dokumen di baris pertama.
     `;
 

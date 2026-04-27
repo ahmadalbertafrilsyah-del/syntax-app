@@ -117,7 +117,7 @@ export default function VisionAIPage() {
       {/* Header Halaman */}
       <motion.div variants={itemVariants} className="text-center md:text-left">
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-3">
-          Vision AI <span className="text-3xl md:text-4xl">📸</span>
+          Vision<span className="text-3xl md:text-4xl"></span>
         </h1>
         <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium max-w-3xl">Unggah foto buku cetak atau catatan. AI akan membaca teks di dalamnya dan menyulapnya menjadi materi atau soal evaluasi berkualitas.</p>
       </motion.div>

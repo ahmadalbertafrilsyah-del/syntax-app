@@ -132,7 +132,7 @@ export default function GeneratorPage() {
       
       {/* Header Halaman */}
       <motion.div variants={itemVariants} className="text-center md:text-left">
-        <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Ruang Racik AI ✨</h1>
+        <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Ruang Racik</h1>
         <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium">Atur parameter di bawah ini, biarkan AI merancang perangkat ajar Anda.</p>
       </motion.div>
 
@@ -229,7 +229,7 @@ export default function GeneratorPage() {
                         </label>
                         <div className="relative">
                           <select value={metode} onChange={(e) => setMetode(e.target.value)} className="w-full p-3.5 pr-10 bg-white border border-emerald-200 text-emerald-800 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-[13px] md:text-sm cursor-pointer font-bold transition-all appearance-none shadow-sm">
-                            <option value="">Bebaskan AI menentukan</option>
+                            <option value="">Bebaskan/Random</option>
                             <option value="Problem Based Learning (PBL)">Problem Based Learning (PBL)</option>
                             <option value="Project Based Learning (PjBL)">Project Based Learning (PjBL)</option>
                             <option value="Discovery Learning">Discovery Learning</option>
