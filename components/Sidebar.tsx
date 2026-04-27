@@ -41,7 +41,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
     { name: "Pengaturan", path: "/guru/pengaturan", icon: "⚙️", mobileName: "Profil" }, 
   ];
 
-  // MENU ADMIN (Menu Pengaturan Telah Ditambahkan!)
+  // MENU ADMIN
   const adminMenuItems = [
     { name: "Overview", path: "/admin", icon: "🔐", mobileName: "Overview" },
     { name: "Kelola Pengguna", path: "/admin/users", icon: "👥", mobileName: "Pengguna" },
@@ -114,11 +114,11 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
       {/* ========================================================= */}
       {/* MOBILE BOTTOM NAVIGATION (Kini Muncul untuk GURU & ADMIN)   */}
       {/* ========================================================= */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 px-1 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)] overflow-x-auto custom-scrollbar">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex flex-nowrap items-center h-16 z-50 px-2 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)] overflow-x-auto custom-scrollbar gap-1">
         {currentMenuItems.map((item) => {
           const isActive = pathname === item.path;
           return (
-            <Link key={item.name} href={item.path} className="flex flex-col items-center justify-center w-full h-full min-w-[60px] space-y-1 active:scale-95 transition-transform shrink-0">
+            <Link key={item.name} href={item.path} className="flex-1 flex flex-col items-center justify-center h-full min-w-[64px] space-y-1 active:scale-95 transition-transform shrink-0">
               <span className={`text-lg sm:text-xl ${isActive ? 'grayscale-0 opacity-100 scale-110 transition-transform' : 'grayscale opacity-50'}`}>
                 {item.icon}
               </span>
