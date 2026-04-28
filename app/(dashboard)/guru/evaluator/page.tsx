@@ -17,6 +17,7 @@ export default function EvaluatorPage() {
   // State Form
   const [mapel, setMapel] = useState("");
   const [topik, setTopik] = useState("");
+  const [soal, setSoal] = useState(""); // State baru untuk Soal
   const [kunciJawaban, setKunciJawaban] = useState("");
   const [jawabanSiswa, setJawabanSiswa] = useState("");
   
@@ -38,7 +39,10 @@ export default function EvaluatorPage() {
     let teksLengkap = "";
 
     try {
-      const streamResult = await evaluateEssayStream(mapel, topik, kunciJawaban, jawabanSiswa);
+      // Trik: Gabungkan Topik dan Soal agar tidak perlu mengubah lib/ai.ts
+      const payloadTopik = `Topik: ${topik} \n\nPertanyaan/Soal: ${soal}`;
+
+      const streamResult = await evaluateEssayStream(mapel, payloadTopik, kunciJawaban, jawabanSiswa);
       setIsLoading(false); 
 
       for await (const chunk of streamResult) {
@@ -48,12 +52,14 @@ export default function EvaluatorPage() {
 
       setIsStreaming(false);
 
+      // Simpan ke riwayat database
       await addDoc(collection(db, "dokumen"), {
         id_user: user.uid,
         tipe: "Koreksi Esai Siswa",
         fase: "Umum",
         mapel: mapel,
         topik: topik,
+        soal: soal,
         konten_ai: teksLengkap,
         dibuat_pada: serverTimestamp(),
       });
@@ -85,7 +91,7 @@ export default function EvaluatorPage() {
       {/* Header Halaman */}
       <motion.div variants={itemVariants} className="text-center md:text-left">
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-2">
-          Auto-Korektor<span className="text-3xl"></span>
+          Auto-Korektor<span className="text-3xl">💯</span>
         </h1>
         <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium max-w-3xl">
           Bandingkan jawaban esai siswa dengan kunci jawaban ideal Anda. AI akan memberikan skor objektif dan umpan balik yang membangun.
@@ -113,7 +119,20 @@ export default function EvaluatorPage() {
 
             <div className="h-px w-full bg-slate-100 hidden md:block my-1"></div>
 
-            {/* BARIS 2: KUNCI JAWABAN (GURU) */}
+            {/* BARIS BARU: PERTANYAAN / SOAL (Warna Amber) */}
+            <div>
+              <label className="block text-[13px] md:text-sm font-bold text-amber-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Pertanyaan / Soal Esai
+              </label>
+              <textarea 
+                required value={soal} onChange={(e) => setSoal(e.target.value)} 
+                placeholder="Masukkan soal atau pertanyaan yang diberikan kepada siswa..." 
+                className="w-full p-4 bg-amber-50/30 border border-amber-200 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none text-[13px] md:text-sm resize-none min-h-[80px] md:min-h-[100px] font-medium text-slate-700 transition-all leading-relaxed shadow-sm" 
+              />
+            </div>
+
+            {/* BARIS 2: KUNCI JAWABAN (Warna Hijau/Emerald) */}
             <div>
               <label className="block text-[13px] md:text-sm font-bold text-emerald-700 mb-2 flex items-center gap-2">
                 <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -126,7 +145,7 @@ export default function EvaluatorPage() {
               />
             </div>
 
-            {/* BARIS 3: JAWABAN SISWA */}
+            {/* BARIS 3: JAWABAN SISWA (Warna Biru) */}
             <div>
               <label className="block text-[13px] md:text-sm font-bold text-blue-700 mb-2 flex items-center gap-2">
                 <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -202,7 +221,7 @@ export default function EvaluatorPage() {
                   <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-20">
                     <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center mb-5 md:mb-6 text-3xl md:text-4xl shadow-inner">📝</div>
                     <h3 className="font-bold text-slate-600 text-base md:text-lg">Siap Mengoreksi</h3>
-                    <p className="text-[13px] md:text-sm max-w-[280px] md:max-w-sm mt-2">Masukkan kunci jawaban Anda dan tempel teks jawaban siswa. AI akan menganalisisnya dalam hitungan detik.</p>
+                    <p className="text-[13px] md:text-sm max-w-[280px] md:max-w-sm mt-2">Masukkan soal, kunci jawaban, dan tempel teks jawaban siswa. AI akan menganalisisnya dalam hitungan detik.</p>
                   </motion.div>
                 )}
               </AnimatePresence>
