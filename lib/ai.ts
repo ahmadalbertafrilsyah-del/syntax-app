@@ -173,7 +173,7 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
 
     // 3. PROSES GENERASI AI (MODE STREAMING)
     console.log("Menghubungi Google Gemini 2.5 Flash...");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { maxOutputTokens: 8192, temperature: 0.7, }});
 
     const prompt = `
       Anda adalah pakar kurikulum dan ahli pendidikan profesional di Indonesia.
@@ -221,7 +221,7 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
 
     const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { maxOutputTokens: 8192, temperature: 0.7, }});
 
     const prompt = `
       Anda adalah asisten pendidikan profesional. Saya memberikan Anda sebuah foto dari halaman buku atau materi pelajaran untuk mata pelajaran "${mapel}" jenjang "${fase}".
@@ -270,7 +270,7 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
 
     const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { maxOutputTokens: 8192, temperature: 0.7, }});
 
     const prompt = `
       Anda adalah seorang guru mata pelajaran "${mapel}" yang sangat teliti, objektif, dan bijaksana.
@@ -316,7 +316,7 @@ export async function* chatAssistantStream(history: {role: "user" | "model", par
   try {
     const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { maxOutputTokens: 8192, temperature: 0.7, }});
 
     const chat = model.startChat({
       history: history,

@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 "use client";
 
 import { useState } from "react";
