@@ -189,7 +189,10 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
       ATURAN BAKU & FORMAT PEMBUATAN (WAJIB DIPATUHI 100%):
       ${instruksiSistem}
 
+      ATURAN FORMATTING GLOBAL (SANGAT PENTING):
       - Tuliskan dalam format Markdown yang sangat rapi dan profesional. 
+      - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$) untuk rumus matematika atau variabel! Tuliskan semua angka, variabel, dan persamaan murni menggunakan teks biasa (Contoh BENAR: 3x - 2y = 12. Contoh SALAH: $3x - 2y = 12$).
+      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB ditulis pada baris baru secara vertikal (ke bawah), BUKAN menyamping sebaris dengan teks soal.
       - Gunakan format tabel Markdown jika struktur dokumen tersebut lebih mudah dibaca dalam bentuk tabel.
       - Jangan berikan kalimat pengantar (seperti "Berikut adalah dokumennya..."). Langsung tuliskan Judul Dokumen di baris pertama.
     `;
@@ -229,7 +232,11 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
       4. Buatkan 5 SOAL ESAI HOTS (Higher Order Thinking Skills).
       5. Sertakan KUNCI JAWABAN di bagian paling akhir.
 
-      Tuliskan dalam format Markdown yang rapi. Langsung berikan hasilnya tanpa kalimat pengantar.
+      ATURAN FORMATTING GLOBAL (SANGAT PENTING):
+      - Tuliskan dalam format Markdown yang rapi. 
+      - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$) untuk rumus matematika atau variabel! Tuliskan persamaan murni menggunakan teks biasa agar mudah dibaca di WhatsApp atau Word (Contoh: 3x - 2y = 12).
+      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB diletakkan pada baris yang baru (vertikal ke bawah), BUKAN menyamping di baris yang sama dengan soal.
+      - Langsung berikan hasilnya tanpa kalimat pengantar.
     `;
 
     const imagePart = {
@@ -282,7 +289,10 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
       4. Berikan ANALISIS KEKURANGAN: Poin penting apa dari kunci jawaban yang terlewat, salah, atau kurang dijelaskan oleh siswa?
       5. Berikan SARAN PERBAIKAN: Kalimat penyemangat dan apa yang harus dipelajari siswa ke depannya.
 
-      Tuliskan hasil evaluasi Anda dalam format Markdown yang rapi, profesional, dan mudah dibaca. Langsung mulai dari Nilai Akhir tanpa kalimat pengantar.
+      ATURAN FORMATTING GLOBAL:
+      - Tuliskan hasil evaluasi Anda dalam format Markdown yang rapi, profesional, dan mudah dibaca. 
+      - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$) untuk penulisan angka atau rumus matematika! Tuliskan dalam teks biasa.
+      - Langsung mulai dari Nilai Akhir tanpa kalimat pengantar.
     `;
 
     const result = await model.generateContentStream(prompt);
