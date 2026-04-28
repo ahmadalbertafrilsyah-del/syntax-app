@@ -1,6 +1,6 @@
-export const maxDuration = 60;
-
 "use client";
+
+export const maxDuration = 60;
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
