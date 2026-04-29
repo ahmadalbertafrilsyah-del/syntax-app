@@ -172,7 +172,7 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
     }
 
     // 3. PROSES GENERASI AI (MODE STREAMING)
-    console.log("Menghubungi Google Gemini 2.5 Flash...");
+    console.log("Menghubungi Google Gemini 2.5 Pro...");
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
       generationConfig: {
