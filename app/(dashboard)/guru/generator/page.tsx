@@ -2,7 +2,7 @@
 
 export const maxDuration = 60;
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { generatePerangkatAjar } from "@/lib/ai";
 import { useAuth } from "@/lib/AuthContext";
@@ -37,6 +37,10 @@ export default function GeneratorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasil, setHasil] = useState("");
   const [isStreaming, setIsStreaming] = useState(false); 
+  const [isDownloading, setIsDownloading] = useState(false); // Loading state untuk PDF
+
+  // Ref untuk menarget area dokumen yang akan di-PDF-kan
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +123,35 @@ export default function GeneratorPage() {
     alert("Teks berhasil disalin!");
   };
 
+  // FUNGSI UNDUH PDF
+  const handleDownloadPDF = async () => {
+    if (!pdfRef.current) return;
+    setIsDownloading(true);
+
+    try {
+      // Import dinamis agar tidak error saat rendering Next.js di Server
+      const html2pdf = (await import("html2pdf.js")).default;
+      
+      const fileName = `${tipe}_${mapel}_${fase}.pdf`.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+
+      const opt: any = {
+        margin: 15,
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true }, // Scale 2 agar teks dan tabel tidak buram
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Mencegah tabel terpotong di tengah
+      };
+
+      await html2pdf().set(opt as any).from(pdfRef.current).save();
+    } catch (error) {
+      console.error("Gagal membuat PDF:", error);
+      alert("Terjadi kesalahan saat membuat PDF.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const isEvaluasi = tipe === "Bank Soal" || tipe === "Rubrik Penilaian";
   const labelTopik = isEvaluasi 
     ? "Bahan Evaluasi / Materi Ujian" 
@@ -132,22 +165,17 @@ export default function GeneratorPage() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="max-w-6xl mx-auto pb-24 md:pb-10 px-4 md:px-6 pt-4 md:pt-6 space-y-6">
       
-      {/* Header Halaman */}
       <motion.div variants={itemVariants} className="text-center md:text-left">
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Ruang Racik</h1>
         <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium">Atur parameter di bawah ini, biarkan AI merancang perangkat ajar Anda.</p>
       </motion.div>
 
-      {/* TATA LETAK ATAS-BAWAH (FLEX COLUMN FULL WIDTH) */}
       <div className="flex flex-col gap-6 md:gap-8">
         
-        {/* BAGIAN ATAS: FORMULIR FULL WIDTH */}
         <motion.div variants={itemVariants} className="w-full">
           <form onSubmit={handleGenerate} className="bg-white p-5 md:p-8 rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-5 md:gap-6">
             
-            {/* BARIS 1: SUMBER, FASE, MAPEL (Berjejer 3 Kolom di layar besar) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-              {/* Sumber Referensi */}
               <div>
                 <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2">Sumber Referensi Dasar</label>
                 <div className="relative">
@@ -161,7 +189,6 @@ export default function GeneratorPage() {
                 </div>
               </div>
 
-              {/* Fase / Kelas */}
               <div>
                 <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2">Fase / Kelas</label>
                 <div className="relative">
@@ -180,7 +207,6 @@ export default function GeneratorPage() {
                 </div>
               </div>
 
-              {/* Mata Pelajaran */}
               <div>
                 <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2">Mata Pelajaran</label>
                 <input required type="text" value={mapel} onChange={(e) => setMapel(e.target.value)} placeholder="Contoh: Biologi" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[13px] md:text-sm font-medium text-slate-700 transition-all shadow-sm" />
@@ -189,7 +215,6 @@ export default function GeneratorPage() {
 
             <div className="h-px w-full bg-slate-100 hidden md:block my-1"></div>
 
-            {/* BARIS 2: JENIS PERANGKAT */}
             <div>
               <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2.5">Jenis Perangkat Ajar</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2.5">
@@ -211,19 +236,12 @@ export default function GeneratorPage() {
               </div>
             </div>
 
-            {/* ======================================================== */}
-            {/* AREA DYNAMIC CUSTOM FIELDS BERDASARKAN JENIS PERANGKAT   */}
-            {/* ======================================================== */}
             <div className="overflow-hidden -mx-2 px-2 -mb-2 pb-2">
               <AnimatePresence mode="wait">
                 
-                {/* 1. CUSTOM: MODUL AJAR & RPP */}
                 {(tipe === "Modul Ajar (PPM)" || tipe === "RPP") && (
                   <motion.div key="modul" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pt-2">
-                    {/* INI KUNCINYA: Grid otomatis berubah dari 2 kolom menjadi 3 kolom jika "Custom" dipilih */}
                     <div className={`grid grid-cols-1 ${metode === "Lainnya (Custom)" ? "md:grid-cols-3" : "md:grid-cols-2"} gap-4 bg-emerald-50/30 p-4 rounded-2xl border border-emerald-100 transition-all`}>
-                      
-                      {/* Kotak Pilihan Strategi */}
                       <div>
                         <label className="block text-[12px] md:text-[13px] font-bold text-emerald-700 mb-2 flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -242,7 +260,6 @@ export default function GeneratorPage() {
                         </div>
                       </div>
 
-                      {/* Kotak Ketik Custom (Hanya muncul jika dipilih) */}
                       {metode === "Lainnya (Custom)" && (
                         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                           <label className="block text-[12px] md:text-[13px] font-bold text-emerald-700 mb-2">Ketik Model Anda</label>
@@ -250,7 +267,6 @@ export default function GeneratorPage() {
                         </motion.div>
                       )}
 
-                      {/* Kotak Alokasi Waktu (Selalu Muncul) */}
                       <div>
                         <label className="block text-[12px] md:text-[13px] font-bold text-emerald-700 mb-2 flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -258,12 +274,10 @@ export default function GeneratorPage() {
                         </label>
                         <input type="text" value={alokasiWaktu} onChange={(e) => setAlokasiWaktu(e.target.value)} placeholder="Misal: 2 JP x 45 Menit" className="w-full p-3.5 bg-white border border-emerald-200 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-[13px] md:text-sm font-medium text-slate-700 transition-all shadow-sm" />
                       </div>
-
                     </div>
                   </motion.div>
                 )}
 
-                {/* 2. CUSTOM: PROTA & PROMES */}
                 {(tipe === "PROTA" || tipe === "PROMES") && (
                   <motion.div key="prota" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pt-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-amber-50/30 p-4 rounded-2xl border border-amber-100">
@@ -291,7 +305,6 @@ export default function GeneratorPage() {
                   </motion.div>
                 )}
 
-                {/* 3. CUSTOM: BANK SOAL */}
                 {tipe === "Bank Soal" && (
                   <motion.div key="soal" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pt-2">
                     <div className="grid grid-cols-2 gap-4 bg-rose-50/30 p-4 rounded-2xl border border-rose-100">
@@ -310,7 +323,6 @@ export default function GeneratorPage() {
                   </motion.div>
                 )}
 
-                {/* 4. CUSTOM: RUBRIK */}
                 {tipe === "Rubrik Penilaian" && (
                   <motion.div key="rubrik" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pt-2">
                     <div className="bg-purple-50/30 p-4 rounded-2xl border border-purple-100">
@@ -326,7 +338,6 @@ export default function GeneratorPage() {
               </AnimatePresence>
             </div>
 
-            {/* BARIS 4: TOPIK & SUBMIT */}
             <div className="flex flex-col pt-2">
               <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-2 flex justify-between items-center">
                 {labelTopik}
@@ -354,7 +365,6 @@ export default function GeneratorPage() {
           </form>
         </motion.div>
 
-        {/* BAGIAN BAWAH: PREVIEW HASIL */}
         <motion.div variants={itemVariants} className="w-full flex flex-col min-h-[500px] lg:h-[800px]">
           <div className="bg-white rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm flex-1 flex flex-col relative overflow-hidden">
             
@@ -365,15 +375,25 @@ export default function GeneratorPage() {
                 </div>
                 <div>
                   <h2 className="font-bold text-slate-800 text-base md:text-xl leading-tight">Dokumen Hasil</h2>
-                  <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-0.5">Siap disalin dan dipindahkan ke Word</p>
+                  <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-0.5">Siap disalin atau dicetak PDF</p>
                 </div>
               </div>
               
               {hasil && !isStreaming && (
-                <button onClick={handleCopyText} className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[12px] md:text-sm font-bold rounded-xl transition flex items-center gap-2 active:scale-95">
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                  <span className="hidden sm:inline">Salin Teks</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={handleCopyText} className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[12px] md:text-sm font-bold rounded-xl transition flex items-center gap-2 active:scale-95">
+                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                    <span className="hidden sm:inline">Salin</span>
+                  </button>
+                  <button onClick={handleDownloadPDF} disabled={isDownloading} className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[12px] md:text-sm font-bold rounded-xl transition flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isDownloading ? (
+                      <div className="w-4 h-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    )}
+                    <span className="hidden sm:inline">{isDownloading ? "Memproses..." : "Unduh PDF"}</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -391,9 +411,29 @@ export default function GeneratorPage() {
                   </motion.div>
                 ) : hasil ? (
                   <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-sm md:prose-base prose-indigo max-w-none text-slate-700 pb-10 px-2 md:px-6">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {hasil}
-                    </ReactMarkdown>
+                    
+                    {/* BUNGKUSAN KHUSUS UNTUK PDF DENGAN INJEKSI CSS TABEL RAPI */}
+                    <div ref={pdfRef} className="pdf-container">
+                      <style>{`
+                        /* CSS Ini akan memastikan tabel di PDF tercetak dengan garis tegas bergaya A4 resmi */
+                        .pdf-container table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1rem; }
+                        .pdf-container th, .pdf-container td { border: 1px solid #64748b; padding: 10px; text-align: left; font-size: 13px; }
+                        .pdf-container th { background-color: #f1f5f9; font-weight: bold; color: #334155; }
+                        
+                        /* Pencegah pemotongan tabel di tengah kertas */
+                        .pdf-container tr { page-break-inside: avoid; }
+                        .pdf-container h1, .pdf-container h2, .pdf-container h3, .pdf-container h4 { page-break-after: avoid; color: #1e293b; }
+                        
+                        /* Margin bawah paragraf */
+                        .pdf-container p, .pdf-container ul, .pdf-container ol { margin-bottom: 0.75rem; }
+                        .pdf-container { padding: 10px; color: #000; }
+                      `}</style>
+                      
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {hasil}
+                      </ReactMarkdown>
+                    </div>
+
                     {isStreaming && <span className="inline-block w-2 md:w-2.5 h-4 md:h-5 ml-1 bg-slate-400 animate-pulse align-middle"></span>}
                   </motion.div>
                 ) : (

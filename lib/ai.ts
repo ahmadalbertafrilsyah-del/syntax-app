@@ -214,11 +214,12 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
       ${instruksiSistem}
 
       ATURAN FORMATTING GLOBAL (SANGAT PENTING):
-      - Tuliskan dalam format Markdown yang sangat rapi dan profesional. 
-      - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$) untuk rumus matematika atau variabel! Tuliskan semua angka, variabel, dan persamaan murni menggunakan teks biasa (Contoh BENAR: 3x - 2y = 12. Contoh SALAH: $3x - 2y = 12$).
-      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB ditulis pada baris baru secara vertikal (ke bawah), BUKAN menyamping sebaris dengan teks soal.
-      - Gunakan format tabel Markdown jika struktur dokumen tersebut lebih mudah dibaca dalam bentuk tabel.
-      - Jangan berikan kalimat pengantar (seperti "Berikut adalah dokumennya..."). Langsung tuliskan Judul Dokumen di baris pertama.
+      - Tuliskan dalam format Markdown yang sangat rapi dan siap cetak.
+      - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$) untuk rumus matematika atau variabel! Gunakan teks biasa.
+      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB ditulis pada baris baru secara vertikal.
+      - WAJIB GUNAKAN FORMAT TABEL MARKDOWN untuk bagian-bagian terstruktur (seperti Informasi Umum, Rencana Asesmen, PROTA, PROMES, atau Rubrik Penilaian). 
+      - Pastikan setiap tabel memiliki header kolom (contoh: | No | Kriteria | Deskripsi |). DILARANG membuat tabel yang hanya berisi satu kolom.
+      - Jangan berikan kalimat pengantar. Langsung tuliskan Judul Dokumen di baris pertama dengan Heading 1 (# Judul).
     `;
 
     const result = await model.generateContentStream(prompt);
