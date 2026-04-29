@@ -174,7 +174,7 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
     // 3. PROSES GENERASI AI (MODE STREAMING)
     console.log("Menghubungi Google Gemini 2.5 Flash...");
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       generationConfig: {
         maxOutputTokens: 8192, // Napas panjang untuk dokumen 8000 kata
         temperature: 0.7,
@@ -247,7 +247,7 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
     const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       generationConfig: {
         maxOutputTokens: 8192, // Napas panjang untuk dokumen 8000 kata
         temperature: 0.7,
@@ -320,7 +320,7 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
     const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       generationConfig: {
         maxOutputTokens: 8192, // Napas panjang untuk dokumen 8000 kata
         temperature: 0.7,
@@ -390,7 +390,7 @@ export async function* chatAssistantStream(history: {role: "user" | "model", par
     const apiKey = await getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-pro",
       generationConfig: {
         maxOutputTokens: 8192, // Napas panjang untuk dokumen 8000 kata
         temperature: 0.7,
