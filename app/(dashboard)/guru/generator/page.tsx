@@ -12,6 +12,7 @@ import { collection, addDoc, doc, updateDoc, increment, serverTimestamp } from "
 // IMPORT MARKDOWN RENDERER
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 
 export default function GeneratorPage() {
   const { user } = useAuth(); 
@@ -429,7 +430,7 @@ export default function GeneratorPage() {
                         .pdf-container { padding: 10px; color: #000; }
                       `}</style>
                       
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                         {hasil}
                       </ReactMarkdown>
                     </div>
