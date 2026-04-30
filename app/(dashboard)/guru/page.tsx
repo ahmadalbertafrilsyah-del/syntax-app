@@ -19,13 +19,13 @@ export default function GuruDashboard() {
     {
       id: 1,
       title: "Selamat Datang di Era Baru Pendidikan!",
-      desc: "Manfaatkan kekuatan AI untuk menyusun perangkat ajar berstandar nasional dalam hitungan menit.",
+      desc: "Manfaatkan kekuatan AI (Artificial Intelligence) untuk menyusun perangkat ajar berstandar nasional dalam hitungan menit.",
       bg: "from-indigo-600 to-purple-700",
       icon: "🚀"
     },
     {
       id: 2,
-      title: "Coba Fitur Vision AI Sekarang",
+      title: "Coba Fitur Vision Sekarang",
       desc: "Ubah foto materi dari buku cetak menjadi teks ringkasan atau soal evaluasi secara instan.",
       bg: "from-emerald-500 to-teal-700",
       icon: "📸"
@@ -33,7 +33,7 @@ export default function GuruDashboard() {
     {
       id: 3,
       title: "Auto-Korektor Telah Hadir",
-      desc: "Tinggalkan cara manual. Biarkan AI mengoreksi esai siswa Anda berdasarkan rubrik yang Anda tentukan.",
+      desc: "Tinggalkan cara manual. Biarkan AI (Artificial Intelligence) mengoreksi esai siswa Anda berdasarkan rubrik yang Anda tentukan.",
       bg: "from-rose-500 to-pink-700",
       icon: "💯"
     }
@@ -135,15 +135,15 @@ export default function GuruDashboard() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 text-slate-500 font-bold text-sm">
                 <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                Sisa Kuota AI
+                Sisa Token
               </div>
-              <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Premium</span>
+              <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Pro</span>
             </div>
             <h2 className="text-5xl md:text-6xl font-black text-slate-800 tracking-tight">{userData?.sisa_kuota !== undefined ? userData.sisa_kuota : 0}</h2>
-            <p className="text-slate-400 text-xs font-medium mt-1">Generasi tersisa bulan ini</p>
+            <p className="text-slate-400 text-xs font-medium mt-1">Gunakan dengan bijak</p>
           </div>
           <button onClick={handleTopUpWA} className="mt-6 w-full py-3.5 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 active:scale-95 rounded-xl text-sm font-bold transition-all flex justify-center items-center gap-2 border border-slate-200 hover:border-indigo-200">
-            Minta Tambahan Kuota
+            Tambahan Token
           </button>
         </motion.div>
 

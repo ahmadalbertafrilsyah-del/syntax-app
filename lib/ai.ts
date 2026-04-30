@@ -97,10 +97,21 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
     // 2. CEK INSTRUKSI ADMIN DI FIREBASE TERLEBIH DAHULU
     let instruksiSistem = await getAdminPrompt(tipe);
 
-    // Profil Pelajar Dinamis
-    const profilPelajar = sumber === "Kementerian Agama" 
-      ? "Profil Pelajar Pancasila (P5) dan nilai-nilai Profil Pelajar Rahmatan Lil 'Alamin (PPRA)" 
-      : "Profil Pelajar Pancasila (P5)";
+    // Profil Pelajar & Fokus Referensi Dinamis
+    let profilPelajar = "Profil Pelajar Pancasila (P5)";
+    let tambahanInstruksiSumber = "";
+
+    if (sumber === "Kementerian Agama") {
+      profilPelajar = "Profil Pelajar Pancasila (P5) dan nilai-nilai Profil Pelajar Rahmatan Lil 'Alamin (PPRA)";
+    } else if (sumber === "Muatan Lokal (Dinas Pendidikan)") {
+      tambahanInstruksiSumber = "FOKUS RUJUKAN: Sesuaikan materi secara khusus dengan pelestarian budaya, kearifan lokal, dan karakteristik daerah (Muatan Lokal).";
+    } else if (sumber === "Pedoman Adiwiyata (KLHK)") {
+      tambahanInstruksiSumber = "FOKUS RUJUKAN: Wajib integrasikan materi pembelajaran dengan pedoman Adiwiyata, pelestarian lingkungan hidup, kebersihan, dan ekologi.";
+    } else if (sumber === "Standar Industri / SKKNI (SMK)") {
+      tambahanInstruksiSumber = "FOKUS RUJUKAN: Sesuaikan kompetensi praktik dengan Standar Kompetensi Kerja Nasional Indonesia (SKKNI) dan kebutuhan industri dunia kerja nyata.";
+    } else if (sumber === "Pendidikan Inklusif (PMPK)") {
+      tambahanInstruksiSumber = "FOKUS RUJUKAN: Gunakan pendekatan Pendidikan Inklusif. Rancang langkah pembelajaran agar ramah untuk Anak Berkebutuhan Khusus (ABK) namun tetap relevan untuk siswa reguler.";
+    }
 
     // JIKA ADMIN BELUM MENGISI PROMPT, GUNAKAN FALLBACK (KODINGAN LAMA ANDA)
     if (!instruksiSistem) {
@@ -145,6 +156,7 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
           Wajib memuat 3 komponen utama:
           1. Informasi Umum: Identitas, Kompetensi Awal, Sarpras, Target Peserta Didik, dan integrasi ${profilPelajar}.
           2. Komponen Inti: Tujuan, Pemahaman Bermakna, Pertanyaan Pemantik, Langkah Pembelajaran (Pendahuluan, Inti, Penutup), dan Rencana Asesmen.
+          => SANGAT PENTING PADA LANGKAH INTI: WAJIB jabarkan strategi Pembelajaran Berdiferensiasi (Diferensiasi Konten/Proses) yang secara spesifik memfasilitasi 3 gaya belajar sekaligus: Visual, Auditori, dan Kinestetik.
           3. Lampiran: Contoh LKPD, Bahan Bacaan, Glosarium, Daftar Pustaka.`;
       } 
       else if (tipe === "RPP") {
@@ -153,8 +165,9 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
           1. Identitas: Kelas, mata pelajaran, alokasi waktu.
           2. Tujuan Pembelajaran (TP).
           3. Langkah-langkah Pembelajaran: Urutan kegiatan (pembukaan, inti, penutup).
+          => SANGAT PENTING PADA LANGKAH INTI: WAJIB jabarkan strategi Pembelajaran Berdiferensiasi untuk 3 gaya belajar: Visual, Auditori, dan Kinestetik.
           4. Penilaian (Asesmen): Cara menilai ketercapaian tujuan.`;
-      } 
+      }
       else if (tipe === "Bank Soal") {
         instruksiSistem = `- FORMAT WAJIB BANK SOAL:
           Wajib memuat:
@@ -203,6 +216,7 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
       Anda adalah pakar kurikulum dan ahli pendidikan profesional di Indonesia.
       Tugas utama Anda: Buat dokumen "${tipe}" untuk mata pelajaran "${mapel}" pada jenjang "${fase}".
       Integrasi Profil Pelajar Wajib: ${profilPelajar}
+      ${tambahanInstruksiSumber}
 
       INFORMASI MATERI / TOPIK / INSTRUKSI DARI GURU:
       "${topik}"

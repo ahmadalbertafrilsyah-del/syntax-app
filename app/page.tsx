@@ -167,8 +167,8 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-10 text-center text-slate-400 text-[10px] border-t border-slate-100 bg-slate-50 tracking-widest uppercase font-black">
-        <p>© 2026 Syntax App — Sistem AI Naskah & Tata Ajar eXpress</p>
+      <footer className="py-10 text-center text-slate-400 text-[10px] border-t border-slate-100 bg-slate-50 tracking-widest uppercase font-italic">
+        <p>© 2026 Syntax Education - 220101110038</p>
       </footer>
     </div>
   );

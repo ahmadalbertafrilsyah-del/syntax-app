@@ -241,11 +241,11 @@ export default function LoginPage() {
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-white mb-6 border border-white/30 text-xl">
               ✨
             </div>
-            <h2 className="text-3xl font-black text-white leading-tight mb-4">
-              "Teknologi tidak akan menggantikan guru hebat, namun teknologi di tangan guru yang hebat akan menjadi transformasional."
+            <h2 className="text-2xl font-black text-white leading-tight mb-4">
+              "Teknologi hadir bukan sebagai pengajar utama, melainkan asisten tak kasat mata yang mereduksi beban operasional, sehingga pendekatan andragogi dan deep learning dapat dieksekusi secara utuh."
             </h2>
             <p className="text-indigo-200 font-medium text-sm">
-              — George Couros
+              — Ahmad Albert Afrilsyah
             </p>
             
             <div className="mt-12 pt-8 border-t border-white/10 flex items-center gap-4">

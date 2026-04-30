@@ -34,8 +34,8 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
   // MENU GURU
   const menuItems = [
     { name: "Beranda", path: "/guru", icon: "🏠", mobileName: "Beranda" },
-    { name: "Generator AI", path: "/guru/generator", icon: "✨", mobileName: "Generate" },
-    { name: "Vision AI", path: "/guru/vision", icon: "📸", mobileName: "Vision" },
+    { name: "Generator", path: "/guru/generator", icon: "✨", mobileName: "Generate" },
+    { name: "Vision", path: "/guru/vision", icon: "📸", mobileName: "Vision" },
     { name: "Auto-Korektor", path: "/guru/evaluator", icon: "💯", mobileName: "Koreksi" },
     { name: "Koleksi", path: "/guru/koleksi", icon: "📚", mobileName: "Koleksi" },
     { name: "Pengaturan", path: "/guru/pengaturan", icon: "⚙️", mobileName: "Profil" }, 
