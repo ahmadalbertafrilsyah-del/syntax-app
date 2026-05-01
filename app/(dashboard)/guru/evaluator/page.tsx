@@ -93,10 +93,10 @@ export default function EvaluatorPage() {
       {/* Header Halaman */}
       <motion.div variants={itemVariants} className="text-center md:text-left">
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-2">
-          Auto-Korektor<span className="text-3xl">💯</span>
+          Auto-Korektor<span className="text-3xl"></span>
         </h1>
         <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium max-w-3xl">
-          Bandingkan jawaban esai siswa dengan kunci jawaban ideal Anda. AI akan memberikan skor objektif dan umpan balik yang membangun.
+          Bandingkan jawaban esai siswa dengan kunci jawaban ideal Anda. Sistem akan memberikan skor objektif dan umpan balik yang membangun.
         </p>
       </motion.div>
 
@@ -223,7 +223,7 @@ export default function EvaluatorPage() {
                   <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-20">
                     <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center mb-5 md:mb-6 text-3xl md:text-4xl shadow-inner">📝</div>
                     <h3 className="font-bold text-slate-600 text-base md:text-lg">Siap Mengoreksi</h3>
-                    <p className="text-[13px] md:text-sm max-w-[280px] md:max-w-sm mt-2">Masukkan soal, kunci jawaban, dan tempel teks jawaban siswa. AI akan menganalisisnya dalam hitungan detik.</p>
+                    <p className="text-[13px] md:text-sm max-w-[280px] md:max-w-sm mt-2">Masukkan soal, kunci jawaban, dan tempel teks jawaban siswa. Sistem akan menganalisisnya dalam hitungan detik.</p>
                   </motion.div>
                 )}
               </AnimatePresence>

@@ -101,7 +101,8 @@ export default function GuruHeader() {
           <h2 className="text-sm md:text-base font-bold text-slate-800 leading-tight">
             {userData?.nama || "Pendidik"}
           </h2>
-          <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-0.5 hidden sm:block">
+          {/* UPDATE: Hapus hidden sm:block agar waktu muncul di HP */}
+          <p className="text-[9px] sm:text-[10px] md:text-xs text-slate-500 font-medium mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] sm:max-w-none">
             {formatTime(currentTime)}
           </p>
         </div>
@@ -160,7 +161,7 @@ export default function GuruHeader() {
                     notifications.map((notif) => (
                       <div key={notif.id} className={`p-5 border-b border-slate-50 transition-colors hover:bg-slate-50 cursor-pointer flex gap-4 items-start ${!notif.isRead ? 'bg-indigo-50/30' : ''}`}>
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'admin' ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                          {notif.type === 'admin' ? '📢' : '🤖'}
+                          {notif.type === 'admin' ? '🤖' : '💡'}
                         </div>
                         <div>
                           <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{notif.title}</h4>
@@ -174,7 +175,7 @@ export default function GuruHeader() {
                   ) : (
                     /* Jika Kosong */
                     <div className="p-8 text-center flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">🔕</div>
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">📭</div>
                       <h4 className="font-bold text-slate-700 text-sm mb-1">Belum Ada Pemberitahuan</h4>
                       <p className="text-xs text-slate-500 max-w-[200px]">Semua informasi dari sistem dan Admin akan muncul di sini.</p>
                     </div>
@@ -185,7 +186,7 @@ export default function GuruHeader() {
                 {notifications.length === 0 && (
                    <div className="px-5 py-4 bg-indigo-50/50 border-t border-slate-100">
                      <div className="flex gap-3 items-center">
-                       <span className="text-xl">👋</span>
+                       <span className="text-xl">🚀</span>
                        <div>
                          <h4 className="text-xs font-bold text-indigo-800">Selamat datang di Syntax!</h4>
                          <p className="text-[10px] text-indigo-600 mt-0.5">Mulai racik perangkat ajar pertama Anda.</p>

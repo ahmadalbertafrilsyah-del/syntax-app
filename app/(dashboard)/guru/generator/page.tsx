@@ -26,6 +26,7 @@ export default function GeneratorPage() {
 
   // State Administrasi (Kop & TTD)
   const [namaSekolah, setNamaSekolah] = useState("");
+  const [kotaSekolah, setKotaSekolah] = useState(""); 
   const [namaKepsek, setNamaKepsek] = useState("");
   const [nipKepsek, setNipKepsek] = useState("");
   const [namaGuru, setNamaGuru] = useState("");
@@ -40,6 +41,10 @@ export default function GeneratorPage() {
   const [jumlahPG, setJumlahPG] = useState("10");
   const [jumlahEsai, setJumlahEsai] = useState("5");
   const [jenisTugas, setJenisTugas] = useState("");
+  
+  // STATE BARU: MEMORI KESINAMBUNGAN
+  const [dokumenTerakhir, setDokumenTerakhir] = useState(""); // Menyimpan hasil generate sebelumnya
+  const [gunakanKonteks, setGunakanKonteks] = useState(true); // Toggle sinkronisasi
   
   // State UI
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +93,11 @@ export default function GeneratorPage() {
         if (jenisTugas !== "") topikKirim += `\n- Jenis Tugas yang Dinilai: ${jenisTugas} (Sesuaikan kriteria rubrik dengan jenis tugas ini).`;
       }
 
+      // INJEKSI MEMORI KESINAMBUNGAN
+      if (gunakanKonteks && dokumenTerakhir) {
+        topikKirim += `\n\n===========================\n**PENTING - KONTEKS BERKESINAMBUNGAN:**\nAnda WAJIB membuat dokumen "${tipe}" ini agar selaras, nyambung, dan berkesinambungan dengan dokumen yang telah dibuat sebelumnya. Gunakan Capaian Pembelajaran (CP), Tujuan Pembelajaran (TP), dan materi yang SAMA PERSIS dengan dokumen di bawah ini agar menjadi satu kesatuan perangkat ajar yang utuh:\n\n[DOKUMEN SEBELUMNYA MULAI]\n${dokumenTerakhir}\n[DOKUMEN SEBELUMNYA SELESAI]`;
+      }
+
       // Memanggil AI Backend
       const streamResult = await generatePerangkatAjar(tipe, fase, mapel, topikKirim, sumber);
       setIsLoading(false); 
@@ -99,6 +109,7 @@ export default function GeneratorPage() {
       }
 
       setIsStreaming(false);
+      setDokumenTerakhir(teksLengkap); // Menyimpan hasil ke memori untuk dokumen selanjutnya
 
       // Simpan Riwayat
       await addDoc(collection(db, "dokumen"), {
@@ -109,6 +120,12 @@ export default function GeneratorPage() {
         mapel: mapel,
         topik: topik,
         konten_ai: teksLengkap, 
+        namaSekolah: namaSekolah,
+        kotaSekolah: kotaSekolah,
+        namaKepsek: namaKepsek,
+        nipKepsek: nipKepsek,
+        namaGuru: namaGuru,
+        nipGuru: nipGuru,
         dibuat_pada: serverTimestamp(),
       });
 
@@ -130,16 +147,82 @@ export default function GeneratorPage() {
     alert("Teks berhasil disalin!");
   };
 
-  // FUNGSI 1: UNDUH WORD (Bisa diedit manual oleh guru)
+  // FUNGSI 1: UNDUH WORD (PERBAIKAN FONT ARIAL & TABEL)
   const handleDownloadWord = () => {
     if (!pdfRef.current) return;
+
+    // Bersihkan HTML dari class yang mengganggu Word sebelum diekspor
+    let cleanHTML = pdfRef.current.innerHTML;
+    // Hapus class "markdown-body" yang sering memicu style aneh di Word
+    cleanHTML = cleanHTML.replace(/class="markdown-body"/g, '');
+
+    const header = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Dokumen Perangkat Ajar</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          /* MARGIN & FONT DASAR */
+          @page WordSection1 { size: 21cm 29.7cm; margin: 2.54cm; mso-page-orientation: portrait; }
+          div.WordSection1 { page: WordSection1; }
+          
+          body, p, li, td, th, h1, h2, h3, h4, div { 
+            font-family: Arial, sans-serif !important; 
+            font-size: 12pt !important; 
+            color: black !important;
+            font-weight: normal;
+          }
+          
+          h1, h2, h3, h4 { font-weight: bold !important; margin-top: 18pt; margin-bottom: 6pt; }
+          p, ul, ol { margin-bottom: 12pt; line-height: 1.5; }
+
+          /* PENGATURAN TABEL MATERI - Anti Tabel Ganda */
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 15pt; 
+            margin-bottom: 15pt; 
+            mso-table-lspace: 0pt; 
+            mso-table-rspace: 0pt; 
+          }
+          table, td, th { 
+            border: 1pt solid black !important; 
+          }
+          td, th { 
+            padding: 5pt 8pt; 
+            vertical-align: top; 
+            text-align: left; 
+          }
+          th { 
+            background-color: #f1f5f9; 
+            font-weight: bold !important; 
+            text-align: center; 
+          }
+
+          /* PENGATURAN TABEL TANDA TANGAN - Khusus Tanpa Garis */
+          .sig-table, .sig-table td, .sig-table th, .sig-table tr { 
+            border: none !important; 
+          }
+        </style>
+      </head>
+      <body>
+        <div class="WordSection1">
+          ${cleanHTML}
+        </div>
+      </body>
+      </html>
+    `;
     
-    // Membungkus HTML dengan format standar Microsoft Word
-    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Dokumen Perangkat Ajar</title></head><body>";
-    const footer = "</body></html>";
-    const sourceHTML = header + pdfRef.current.innerHTML + footer;
-    
-    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(header);
     const fileDownload = document.createElement("a");
     document.body.appendChild(fileDownload);
     fileDownload.href = source;
@@ -148,9 +231,64 @@ export default function GeneratorPage() {
     document.body.removeChild(fileDownload);
   };
 
-  // FUNGSI 2: CETAK PDF HD (Bisa di-copy, format vektor asli)
+  // FUNGSI 2: CETAK PDF HD (MENGGUNAKAN IFRAME ISOLATION AGAR BISA BERLEMBAR-LEMBAR)
   const handlePrintPDF = () => {
-    window.print(); // Memanggil fungsi Print bawaan browser (Paling HD & Teks Vektor)
+    const printContent = pdfRef.current?.innerHTML;
+    if (!printContent) return;
+
+    // Membuat dokumen virtual tersembunyi
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (!iframeDoc) return;
+
+    // Menyuntikkan HTML dan CSS langsung ke dokumen virtual
+    iframeDoc.open();
+    iframeDoc.write(`
+      <html>
+        <head>
+          <title>${topik || "Dokumen Perangkat Ajar"}</title>
+          <style>
+            @page { size: A4 portrait; margin: 2.54cm; }
+            body { 
+              font-family: Arial, sans-serif !important; 
+              font-size: 12pt !important; 
+              line-height: 1.5 !important; 
+              color: #000; 
+              margin: 0;
+              padding: 0;
+            }
+            .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+            .markdown-body th, .markdown-body td { border: 1pt solid #000; padding: 8px 10px; text-align: left; vertical-align: top; }
+            .markdown-body th { background-color: #f1f5f9; font-weight: bold; text-align: center; }
+            
+            .markdown-body tr { page-break-inside: avoid; }
+            .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { page-break-after: avoid; color: #000; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+            .markdown-body p, .markdown-body ul, .markdown-body ol { margin-bottom: 0.5rem; }
+            
+            .sig-table { width: 100%; border-collapse: collapse; margin-top: 2rem; page-break-inside: avoid; border: none !important; }
+            .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `);
+    iframeDoc.close();
+
+    // Tunggu sejenak agar iframe selesai me-render sebelum print dipanggil
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      
+      // Hapus dokumen virtual setelah selesai agar memori tidak bocor
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    }, 500);
   };
 
   const isEvaluasi = tipe === "Bank Soal" || tipe === "Rubrik Penilaian";
@@ -159,6 +297,8 @@ export default function GeneratorPage() {
     : (tipe === "Modul Ajar (PPM)" || tipe === "RPP") 
       ? "Topik Pembelajaran Utama" 
       : "Capaian / Lingkup Materi";
+
+  const tanggalSekarang = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const itemVariants = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -176,14 +316,15 @@ export default function GeneratorPage() {
         <motion.div variants={itemVariants} className="w-full">
           <form onSubmit={handleGenerate} className="bg-white p-5 md:p-8 rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-5 md:gap-6">
             
-            {/* BARIS TAMBAHAN: IDENTITAS RESMI (OPSIONAL) */}
+            {/* IDENTITAS RESMI */}
             <div className="bg-slate-50/70 p-4 md:p-5 rounded-2xl border border-slate-200 mb-6">
               <label className="block text-[13px] md:text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                 <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Identitas Resmi (Opsional - Muncul Saat Cetak PDF)
+                Identitas Resmi (Opsional - Muncul Saat Cetak PDF & Word)
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                <input type="text" value={namaSekolah} onChange={(e) => setNamaSekolah(e.target.value)} placeholder="Contoh: MA Darul Ma'arif Payaman" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[12px] md:text-[13px] outline-none focus:border-indigo-500 shadow-sm" />
+                <input type="text" value={namaSekolah} onChange={(e) => setNamaSekolah(e.target.value)} placeholder="Nama Sekolah (Contoh: MA Darul Ma'arif)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[12px] md:text-[13px] outline-none focus:border-indigo-500 shadow-sm" />
+                <input type="text" value={kotaSekolah} onChange={(e) => setKotaSekolah(e.target.value)} placeholder="Kota/Kabupaten (Contoh: Lamongan)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[12px] md:text-[13px] outline-none focus:border-indigo-500 shadow-sm" />
                 <input type="text" value={namaKepsek} onChange={(e) => setNamaKepsek(e.target.value)} placeholder="Nama Kepala Sekolah" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[12px] md:text-[13px] outline-none focus:border-indigo-500 shadow-sm" />
                 <input type="text" value={nipKepsek} onChange={(e) => setNipKepsek(e.target.value)} placeholder="NIP Kepala Sekolah" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[12px] md:text-[13px] outline-none focus:border-indigo-500 shadow-sm" />
                 <input type="text" value={namaGuru} onChange={(e) => setNamaGuru(e.target.value)} placeholder="Nama Anda (Guru Mapel)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[12px] md:text-[13px] outline-none focus:border-indigo-500 shadow-sm" />
@@ -368,6 +509,17 @@ export default function GeneratorPage() {
                 className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[13px] md:text-sm resize-none min-h-[100px] md:min-h-[120px] font-medium text-slate-700 transition-all leading-relaxed shadow-sm mb-5" 
               />
 
+              {/* FITUR MEMORI KESINAMBUNGAN (MUNCUL JIKA ADA DOKUMEN SEBELUMNYA) */}
+              {dokumenTerakhir && (
+                <label className="flex items-start gap-3 p-4 mb-5 bg-indigo-50/60 rounded-xl border border-indigo-200 cursor-pointer hover:bg-indigo-100/50 transition-all">
+                  <input type="checkbox" checked={gunakanKonteks} onChange={(e) => setGunakanKonteks(e.target.checked)} className="mt-0.5 w-4 h-4 text-indigo-600 rounded border-indigo-300 focus:ring-indigo-500" />
+                  <div>
+                    <p className="text-[13px] md:text-sm font-bold text-indigo-800">Sinkronkan dengan Dokumen Sebelumnya</p>
+                    <p className="text-[11px] md:text-[12px] text-indigo-600/90 mt-0.5 leading-relaxed">Cawang ini agar AI menggunakan materi dan Tujuan Pembelajaran dari dokumen yang baru saja Anda buat ke dalam dokumen baru ini.</p>
+                  </div>
+                </label>
+              )}
+
               <button type="submit" disabled={isLoading || isStreaming} className={`w-full md:w-auto self-end px-8 py-3.5 md:py-4 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-md text-[14px] md:text-[15px] ${isLoading || isStreaming ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-200'}`}>
                 {isLoading ? (
                   <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Menganalisis...</>
@@ -395,7 +547,7 @@ export default function GeneratorPage() {
                 </div>
                 <div>
                   <h2 className="font-bold text-slate-800 text-base md:text-xl leading-tight">Dokumen Hasil</h2>
-                  <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-0.5">Siap disalin atau dicetak PDF</p>
+                  <p className="text-[10px] md:text-xs text-slate-500 font-medium mt-0.5">Siap disalin atau dicetak PDF/Word</p>
                 </div>
               </div>
               
@@ -432,66 +584,80 @@ export default function GeneratorPage() {
                 ) : hasil ? (
                   <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-sm md:prose-base prose-indigo max-w-none text-slate-700 pb-10 px-2 md:px-6">
                     
-                    {/* BUNGKUSAN KHUSUS UNTUK PDF DENGAN INJEKSI CSS TABEL RAPI */}
+                    {/* BUNGKUSAN UTAMA UNTUK DOKUMEN CETAK/WORD */}
                     <div ref={pdfRef} className="pdf-container relative">
                       <style>{`
-                        /* PENGATURAN FONT & SPASI STANDAR RESMI */
+                        /* Tampilan di web saja, tampilan PDF dan Word sudah diisolasi */
                         .pdf-container { 
                           font-family: Arial, sans-serif !important; 
                           font-size: 12pt !important; 
-                          line-height: 1.15 !important; 
+                          line-height: 1.5 !important; 
                           color: #000; 
                         }
-                        
-                        /* PENGATURAN TABEL */
-                        .pdf-container table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1rem; }
-                        .pdf-container th, .pdf-container td { border: 1px solid #000; padding: 8px; text-align: left; }
-                        .pdf-container th { background-color: #f1f5f9; font-weight: bold; }
-                        
-                        /* PENCEGAH TERPOTONG DI TENGAH KERTAS */
-                        .pdf-container tr { page-break-inside: avoid; }
-                        .pdf-container h1, .pdf-container h2, .pdf-container h3, .pdf-container h4 { page-break-after: avoid; color: #000; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-                        .pdf-container p, .pdf-container ul, .pdf-container ol { margin-bottom: 0.5rem; }
-                        
-                        /* SULAP CETAK (Menyembunyikan UI Web saat di-print/Save as PDF) */
-                        @media print {
-                          body * { visibility: hidden; }
-                          .pdf-container, .pdf-container * { visibility: visible; }
-                          .pdf-container { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-                          @page { size: A4 portrait; margin: 2cm; }
-                        }
+                        .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+                        .markdown-body th, .markdown-body td { border: 1pt solid #000; padding: 8px 10px; text-align: left; vertical-align: top; }
+                        .markdown-body th { background-color: #f1f5f9; font-weight: bold; text-align: center; }
+                        .markdown-body tr { page-break-inside: avoid; }
+                        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; }
+                        .markdown-body p, .markdown-body ul, .markdown-body ol { margin-bottom: 0.5rem; }
                       `}</style>
-                      
-                      {/* === KOP SURAT (Hanya muncul jika nama sekolah diisi) === */}
+
+                      {/* === KOP SURAT (DENGAN INLINE CSS AGAR MASUK KE IFRAME) === */}
                       {namaSekolah && (
-                        <div className="text-center border-b-[3px] border-black pb-3 mb-6" style={{ pageBreakAfter: 'avoid' }}>
-                          <h1 className="text-xl md:text-2xl font-black uppercase tracking-wide text-black m-0 leading-tight">
+                        <div style={{ textAlign: 'center', borderBottom: '3px solid black', paddingBottom: '12px', marginBottom: '24px', pageBreakAfter: 'avoid' }}>
+                          <h1 style={{ fontSize: '24px', fontWeight: '900', textTransform: 'uppercase', color: 'black', margin: '0' }}>
                             {namaSekolah}
                           </h1>
                         </div>
                       )}
 
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                        {hasil}
-                      </ReactMarkdown>
+                      <div className="markdown-body">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                          {hasil}
+                        </ReactMarkdown>
+                      </div>
 
-                      {/* === TANDA TANGAN (Hanya muncul jika nama guru/kepsek diisi) === */}
+                      {/* === TANDA TANGAN (DENGAN INLINE CSS AGAR MASUK KE IFRAME) === */}
                       {(namaGuru || namaKepsek) && (
-                        <div className="mt-12 pt-8 flex justify-between text-black text-[13px] md:text-sm" style={{ pageBreakInside: 'avoid' }}>
-                          <div className="text-center w-1/2">
-                            <p className="mb-1">Mengetahui,</p>
-                            <p className="font-bold mb-24">Kepala Sekolah</p>
-                            <p className="font-bold underline decoration-1 underline-offset-4">{namaKepsek || "_______________________"}</p>
-                            {nipKepsek ? <p className="mt-1">NIP. {nipKepsek}</p> : <p className="mt-1 text-transparent">NIP</p>}
-                          </div>
-                          <div className="text-center w-1/2">
-                            <p className="mb-1">Indonesia, {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            <p className="font-bold mb-24">Guru Mata Pelajaran</p>
-                            <p className="font-bold underline decoration-1 underline-offset-4">{namaGuru || "_______________________"}</p>
-                            {nipGuru ? <p className="mt-1">NIP. {nipGuru}</p> : <p className="mt-1 text-transparent">NIP</p>}
-                          </div>
-                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '2rem', pageBreakInside: 'avoid', border: 'none' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ width: '50%', border: 'none' }}></td>
+                              <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>
+                                {kotaSekolah || "Nama Kota"}, {tanggalSekarang}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colSpan={2} style={{ border: 'none', textAlign: 'center', paddingTop: '20px', paddingBottom: '20px' }}>
+                                Mengetahui,
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>
+                                Kepala Sekolah
+                              </td>
+                              <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>
+                                Guru Mata Pelajaran
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ border: 'none', height: '100px' }}></td>
+                              <td style={{ border: 'none', height: '100px' }}></td>
+                            </tr>
+                            <tr>
+                              <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>
+                                <strong><u>{namaKepsek || "Nama Lengkap"}</u></strong><br/>
+                                NIP. {nipKepsek || "000000000000000000"}
+                              </td>
+                              <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>
+                                <strong><u>{namaGuru || "Nama Lengkap"}</u></strong><br/>
+                                NIP. {nipGuru || "000000000000000000"}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       )}
+
                     </div>
 
                     {isStreaming && <span className="inline-block w-2 md:w-2.5 h-4 md:h-5 ml-1 bg-slate-400 animate-pulse align-middle"></span>}

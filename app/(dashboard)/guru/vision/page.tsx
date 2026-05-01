@@ -121,7 +121,7 @@ export default function VisionAIPage() {
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center justify-center md:justify-start gap-3">
           Vision<span className="text-3xl md:text-4xl"></span>
         </h1>
-        <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium max-w-3xl">Unggah foto buku cetak atau catatan. AI akan membaca teks di dalamnya dan menyulapnya menjadi materi atau soal evaluasi berkualitas.</p>
+        <p className="text-[13px] md:text-sm text-slate-500 mt-1.5 md:mt-2 font-medium max-w-3xl">Unggah foto buku cetak atau catatan. Sistem akan membaca teks di dalamnya dan menyulapnya menjadi materi atau soal evaluasi berkualitas.</p>
       </motion.div>
 
       {/* TATA LETAK ATAS-BAWAH (COLUMN) */}
@@ -259,7 +259,7 @@ export default function VisionAIPage() {
                   <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-20 pb-40 px-4">
                     <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center mb-6 text-5xl md:text-6xl shadow-inner">🖼️</div>
                     <h3 className="font-bold text-slate-600 text-base md:text-xl">Kanvas Masih Kosong</h3>
-                    <p className="text-[13px] md:text-sm max-w-md mt-2">Unggah foto materi buku cetak atau catatan Anda, lalu AI akan menyusun ulang isinya atau membuat soal evaluasi berdasarkan foto tersebut.</p>
+                    <p className="text-[13px] md:text-sm max-w-md mt-2">Unggah foto materi buku cetak atau catatan Anda, lalu Sistem akan menyusun ulang isinya atau membuat soal evaluasi berdasarkan foto tersebut.</p>
                   </motion.div>
                 )}
               </AnimatePresence>
