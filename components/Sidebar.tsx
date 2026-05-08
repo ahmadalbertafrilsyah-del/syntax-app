@@ -31,9 +31,10 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
     return () => unsubscribe();
   }, []);
 
-  // MENU GURU
+  // MENU GURU (Sudah ditambahkan menu Akademik)
   const menuItems = [
     { name: "Beranda", path: "/guru", icon: "🏠", mobileName: "Beranda" },
+    { name: "Akademik", path: "/guru/akademik", icon: "🎓", mobileName: "Akademik" },
     { name: "Generator", path: "/guru/generator", icon: "✨", mobileName: "Generate" },
     { name: "Vision", path: "/guru/vision", icon: "📸", mobileName: "Vision" },
     { name: "Auto-Korektor", path: "/guru/evaluator", icon: "💯", mobileName: "Koreksi" },
@@ -51,38 +52,37 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
     { name: "Pengaturan", path: "/admin/pengaturan", icon: "⚙️", mobileName: "Profil" }, 
   ];
 
-  const handleMenuClick = () => {
-    if (setIsSidebarOpen) setIsSidebarOpen(false);
-  };
-
   if (loading) return null;
 
-  // Menentukan menu mana yang dipakai berdasarkan Role
   const currentMenuItems = role === "admin" ? adminMenuItems : menuItems;
 
   return (
     <>
       {/* ========================================================= */}
-      {/* DESKTOP SIDEBAR (Sembunyi di HP, Muncul di Desktop/MD)      */}
+      {/* DESKTOP SIDEBAR (Bento Floating Style)                      */}
       {/* ========================================================= */}
-      <aside className={`hidden md:flex bg-white border-r border-slate-200 flex-col h-screen sticky top-0 z-50 w-64`}>
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-indigo-600 tracking-tight flex items-center gap-2">
-            <img src="https://i.ibb.co.com/JjK2w93q/LOGO-SYNTAX.png" alt="Logo" className="w-6 h-6 object-contain" />
+      <aside className="hidden md:flex flex-col w-[260px] bg-white rounded-[32px] m-4 h-[calc(100vh-32px)] shadow-sm sticky top-4 border border-white/40 overflow-hidden shrink-0">
+        
+        {/* LOGO AREA */}
+        <div className="p-7 flex items-center justify-center mb-2">
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2.5">
+            <img src="https://i.ibb.co.com/JjK2w93q/LOGO-SYNTAX.png" alt="Logo" className="w-8 h-8 object-contain drop-shadow-sm" />
             Syntax
           </h2>
         </div>
 
-        <nav className="flex-1 p-4 space-y-6 overflow-y-auto custom-scrollbar">
+        {/* NAV LINKS */}
+        <nav className="flex-1 px-4 pb-6 space-y-6 overflow-y-auto hide-scrollbar">
           {role !== "admin" && (
             <div>
-              <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Menu Utama</p>
-              <div className="space-y-1">
+              <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Main Menu</p>
+              <div className="space-y-1.5">
                 {menuItems.map((item) => {
                   const isActive = pathname === item.path;
                   return (
-                    <Link key={item.name} href={item.path} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${isActive ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>
-                      <span className="text-lg">{item.icon}</span> {item.name}
+                    <Link key={item.name} href={item.path} className={`flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all font-bold text-[13px] ${isActive ? "bg-[#1E1E1E] text-white shadow-md shadow-slate-900/20" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}>
+                      <span className={`text-[18px] ${isActive ? '' : 'opacity-80'}`}>{item.icon}</span> 
+                      {item.name}
                     </Link>
                   );
                 })}
@@ -92,16 +92,17 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
 
           {role === "admin" && (
             <div>
-              <div className="px-4 flex items-center gap-2 mb-3">
-                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Admin Panel</p>
-                <div className="h-px flex-1 bg-slate-100"></div>
+              <div className="px-3 flex items-center gap-2 mb-4">
+                <p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em]">Admin</p>
+                <div className="h-[2px] flex-1 bg-orange-100 rounded-full"></div>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {adminMenuItems.map((item) => {
                   const isActive = pathname === item.path;
                   return (
-                    <Link key={item.name} href={item.path} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${isActive ? "bg-slate-900 text-cyan-400 shadow-md" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}>
-                      <span className="text-lg">{item.icon}</span> {item.name}
+                    <Link key={item.name} href={item.path} className={`flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all font-bold text-[13px] ${isActive ? "bg-[#1E1E1E] text-orange-400 shadow-md shadow-slate-900/20" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}>
+                      <span className={`text-[18px] ${isActive ? '' : 'opacity-80'}`}>{item.icon}</span> 
+                      {item.name}
                     </Link>
                   );
                 })}
@@ -112,20 +113,20 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
       </aside>
 
       {/* ========================================================= */}
-      {/* MOBILE BOTTOM NAVIGATION (Kini Muncul untuk GURU & ADMIN)   */}
+      {/* MOBILE BOTTOM NAVIGATION (Floating Pill Style)              */}
       {/* ========================================================= */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex flex-nowrap items-center h-16 z-50 px-2 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)] overflow-x-auto custom-scrollbar gap-1">
+      <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md border border-white/50 rounded-full flex flex-nowrap items-center h-16 z-50 px-3 shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-x-auto hide-scrollbar gap-1">
         {currentMenuItems.map((item) => {
           const isActive = pathname === item.path;
           return (
-            <Link key={item.name} href={item.path} className="flex-1 flex flex-col items-center justify-center h-full min-w-[64px] space-y-1 active:scale-95 transition-transform shrink-0">
-              <span className={`text-lg sm:text-xl ${isActive ? 'grayscale-0 opacity-100 scale-110 transition-transform' : 'grayscale opacity-50'}`}>
+            <Link key={item.name} href={item.path} className={`flex-1 flex flex-col items-center justify-center h-[85%] min-w-[64px] rounded-full space-y-1 active:scale-95 transition-all shrink-0 ${isActive ? 'bg-[#1E1E1E]' : 'bg-transparent'}`}>
+              <span className={`text-[18px] ${isActive ? 'grayscale-0 opacity-100 scale-110 transition-transform' : 'grayscale opacity-60'}`}>
                 {item.icon}
               </span>
-              <span className={`text-[9px] sm:text-[10px] font-bold truncate px-1 max-w-full ${
+              <span className={`text-[9px] font-bold truncate px-1 max-w-full ${
                 isActive 
-                  ? (role === 'admin' ? 'text-slate-800' : 'text-indigo-600') 
-                  : 'text-slate-400'
+                  ? 'text-white' 
+                  : 'text-slate-500'
               }`}>
                 {item.mobileName}
               </span>

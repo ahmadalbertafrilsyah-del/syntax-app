@@ -97,13 +97,9 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
     // 2. CEK INSTRUKSI ADMIN DI FIREBASE TERLEBIH DAHULU
     let instruksiSistem = await getAdminPrompt(tipe);
 
-    // Profil Pelajar & Fokus Referensi Dinamis
-    let profilPelajar = "Profil Pelajar Pancasila (P5)";
+    // Tambahan Sumber Referensi Dinamis
     let tambahanInstruksiSumber = "";
-
-    if (sumber === "Kementerian Agama") {
-      profilPelajar = "Profil Pelajar Pancasila (P5) dan nilai-nilai Profil Pelajar Rahmatan Lil 'Alamin (PPRA)";
-    } else if (sumber === "Muatan Lokal (Dinas Pendidikan)") {
+    if (sumber === "Muatan Lokal (Dinas Pendidikan)") {
       tambahanInstruksiSumber = "FOKUS RUJUKAN: Sesuaikan materi secara khusus dengan pelestarian budaya, kearifan lokal, dan karakteristik daerah (Muatan Lokal).";
     } else if (sumber === "Pedoman Adiwiyata (KLHK)") {
       tambahanInstruksiSumber = "FOKUS RUJUKAN: Wajib integrasikan materi pembelajaran dengan pedoman Adiwiyata, pelestarian lingkungan hidup, kebersihan, dan ekologi.";
@@ -113,74 +109,59 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
       tambahanInstruksiSumber = "FOKUS RUJUKAN: Gunakan pendekatan Pendidikan Inklusif. Rancang langkah pembelajaran agar ramah untuk Anak Berkebutuhan Khusus (ABK) namun tetap relevan untuk siswa reguler.";
     }
 
-    // JIKA ADMIN BELUM MENGISI PROMPT, GUNAKAN FALLBACK (KODINGAN LAMA ANDA)
+    // JIKA ADMIN BELUM MENGISI PROMPT, GUNAKAN FALLBACK BERIKUT
     if (!instruksiSistem) {
       console.log(`ℹ️ Menggunakan instruksi default (fallback) untuk: ${tipe}`);
       instruksiSistem = ""; // Reset string
       
       if (tipe === "PROTA") {
         instruksiSistem = `- FORMAT WAJIB PROTA (Program Tahunan):
-          Buat gambaran umum alokasi waktu 1 tahun. Wajib memuat:
-          1. Identitas: Mata pelajaran, satuan pendidikan, fase/kelas, tahun pelajaran.
-          2. Capaian Pembelajaran (CP): Target kompetensi di akhir fase.
-          3. Daftar Materi/Tujuan Pembelajaran (TP): Rincian materi pokok.
-          4. Alokasi Waktu (JP): Total Jam Pelajaran untuk setiap TP selama satu tahun.`;
+          Buat gambaran umum alokasi waktu 1 tahun. Wajib memuat tabel yang berisi:
+          1. Capaian Pembelajaran / Tujuan Pembelajaran
+          2. Alokasi Waktu (JP)
+          3. Semester`;
       } 
       else if (tipe === "PROMES") {
         instruksiSistem = `- FORMAT WAJIB PROMES / PROSEM (Program Semester):
           Buat dalam format matriks/tabel. Wajib memuat:
-          1. Identitas: Mata pelajaran, kelas, semester, tahun pelajaran.
-          2. Daftar Tujuan Pembelajaran (TP) & Materi Pokok.
-          3. Alokasi Waktu Total: Jam pelajaran per materi.
-          4. Distribusi Waktu: Matriks/tabel pemetaan materi ke minggu ke-1, ke-2, dst. pada setiap bulan dalam semester tersebut.
-          5. Keterangan: Penanda untuk masa ujian, hari libur, dll.`;
+          1. Daftar Tujuan Pembelajaran (TP) & Materi Pokok.
+          2. Alokasi Waktu Total.
+          3. Matriks/tabel pemetaan materi ke minggu ke-1, ke-2, dst. pada setiap bulan.`;
       } 
       else if (tipe === "Analisis TP") {
         instruksiSistem = `- FORMAT WAJIB ANALISIS TP:
-          Bedah CP menjadi TP yang spesifik. Wajib memuat:
-          1. Elemen CP: Bagian spesifik dari CP.
-          2. Kompetensi (Kata Kerja): Keterampilan yang harus dikuasai (misal: menganalisis, merancang).
-          3. Lingkup Materi: Konten/ilmu pengetahuan utama.
-          4. Rumusan TP: Kalimat gabungan antara kompetensi dan lingkup materi.`;
+          Bedah CP menjadi TP spesifik dalam format tabel. Wajib memuat kolom:
+          1. Kompetensi (Kata Kerja Operasional)
+          2. Lingkup Materi`;
       } 
       else if (tipe === "Alur TP (ATP)") {
         instruksiSistem = `- FORMAT WAJIB ATP (Alur Tujuan Pembelajaran):
-          Wajib memuat:
-          1. Identitas Lengkap.
-          2. Urutan Tujuan Pembelajaran (TP): Susun logis dari yang paling dasar hingga paling kompleks.
-          3. Alokasi Waktu: Estimasi JP untuk tiap TP.
-          4. Profil Pelajar: Cantumkan dimensi ${profilPelajar} yang relevan pada tiap TP.`;
+          Susun urutan Tujuan Pembelajaran (TP) dari yang paling dasar hingga paling kompleks lengkap dengan estimasi JP untuk tiap TP.`;
       } 
       else if (tipe === "Modul Ajar (PPM)") {
         instruksiSistem = `- FORMAT WAJIB MODUL AJAR:
-          Wajib memuat 3 komponen utama:
-          1. Informasi Umum: Identitas, Kompetensi Awal, Sarpras, Target Peserta Didik, dan integrasi ${profilPelajar}.
-          2. Komponen Inti: Tujuan, Pemahaman Bermakna, Pertanyaan Pemantik, Langkah Pembelajaran (Pendahuluan, Inti, Penutup), dan Rencana Asesmen.
-          => SANGAT PENTING PADA LANGKAH INTI: WAJIB jabarkan strategi Pembelajaran Berdiferensiasi (Diferensiasi Konten/Proses) yang secara spesifik memfasilitasi 3 gaya belajar sekaligus: Visual, Auditori, dan Kinestetik.
-          3. Lampiran: Contoh LKPD, Bahan Bacaan, Glosarium, Daftar Pustaka.`;
+          Wajib dibuat SANGAT PANJANG, LENGKAP, dan DETAIL. Memuat 3 komponen utama:
+          1. Informasi Umum: Identitas, Kompetensi Awal, Sarpras, Target Peserta Didik, Fokus Karakter.
+          2. Komponen Inti: Tujuan, Pemahaman Bermakna, Pertanyaan Pemantik, Langkah Pembelajaran detail (Pendahuluan, Inti, Penutup), dan Rencana Asesmen.
+          3. Lampiran: Contoh LKPD, Bahan Bacaan lengkap, Glosarium, Daftar Pustaka.`;
       } 
       else if (tipe === "RPP") {
         instruksiSistem = `- FORMAT WAJIB RPP:
-          Wajib memuat:
-          1. Identitas: Kelas, mata pelajaran, alokasi waktu.
-          2. Tujuan Pembelajaran (TP).
-          3. Langkah-langkah Pembelajaran: Urutan kegiatan (pembukaan, inti, penutup).
-          => SANGAT PENTING PADA LANGKAH INTI: WAJIB jabarkan strategi Pembelajaran Berdiferensiasi untuk 3 gaya belajar: Visual, Auditori, dan Kinestetik.
-          4. Penilaian (Asesmen): Cara menilai ketercapaian tujuan.`;
+          Wajib dibuat SANGAT RINGKAS, PADAT, dan TO THE POINT (Format RPP 1 Lembar).
+          HANYA BOLEH MEMUAT 3 KOMPONEN INTI:
+          1. Tujuan Pembelajaran.
+          2. Langkah-langkah Pembelajaran (Pendahuluan, Inti, Penutup).
+          3. Penilaian (Asesmen).
+          DILARANG memasukkan Pemahaman Bermakna, Glosarium, atau Lampiran LKPD yang panjang.`;
       }
       else if (tipe === "Bank Soal") {
         instruksiSistem = `- FORMAT WAJIB BANK SOAL:
-          Wajib memuat:
-          1. Kisi-kisi Soal: Pemetaan TP, indikator soal, bentuk soal, dan tingkat kesukaran (C1-C6).
-          2. Kumpulan Butir Soal: Sediakan ragam instrumen (Pilihan Ganda, Isian Singkat, Esai) dalam jumlah yang banyak/fleksibel.
-          3. Kunci Jawaban.`;
+          1. Berikan kumpulan soal sesuai format dan jumlah yang direquest user.
+          2. Sertakan Kunci Jawaban lengkap di paling bawah.`;
       } 
       else if (tipe === "Rubrik Penilaian") {
         instruksiSistem = `- FORMAT WAJIB RUBRIK PENILAIAN:
-          Buat panduan scoring dalam bentuk tabel. Wajib memuat:
-          1. Aspek/Kriteria yang Dinilai (misal: keakuratan konten, kreativitas).
-          2. Skala Capaian: Gunakan skala "Mulai Berkembang", "Layak", "Cakap", "Mahir".
-          3. Deskripsi Indikator: Penjelasan spesifik pada setiap skala.`;
+          Buat tabel rubrik dengan kolom Aspek yang dinilai, dan kriteria capaian berskala (Mulai Berkembang, Layak, Cakap, Mahir) beserta deskripsinya.`;
       }
     }
 
@@ -189,37 +170,24 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
       generationConfig: {
-        maxOutputTokens: 8192, // Napas panjang untuk dokumen 8000 kata
+        maxOutputTokens: 8192, 
         temperature: 0.7,
       },
       safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
       ],
     });
 
     const prompt = `
       Anda adalah pakar kurikulum dan ahli pendidikan profesional di Indonesia.
       Tugas utama Anda: Buat dokumen "${tipe}" untuk mata pelajaran "${mapel}" pada jenjang "${fase}".
-      Integrasi Profil Pelajar Wajib: ${profilPelajar}
       ${tambahanInstruksiSumber}
 
-      INFORMASI MATERI / TOPIK / INSTRUKSI DARI GURU:
-      "${topik}"
+      INFORMASI MATERI / PARAMETER SPESIFIK DARI GURU:
+      ${topik}
 
       REFERENSI KURIKULUM DASAR:
       ${konteksKurikulum}
@@ -228,12 +196,17 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
       ${instruksiSistem}
 
       ATURAN FORMATTING GLOBAL (SANGAT PENTING):
-      - Tuliskan dalam format Markdown yang sangat rapi dan siap cetak.
+      - Tuliskan dalam format Markdown yang sangat rapi.
       - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$) untuk rumus matematika atau variabel! Gunakan teks biasa.
-      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB ditulis pada baris baru secara vertikal.
-      - WAJIB GUNAKAN FORMAT TABEL MARKDOWN untuk bagian-bagian terstruktur (seperti Informasi Umum, Rencana Asesmen, PROTA, PROMES, atau Rubrik Penilaian). 
-      - Pastikan setiap tabel memiliki header kolom (contoh: | No | Kriteria | Deskripsi |). DILARANG membuat tabel yang hanya berisi satu kolom.
-      - Jangan berikan kalimat pengantar. Langsung tuliskan Judul Dokumen di baris pertama dengan Heading 1 (# Judul).
+      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB DITULIS PADA BARIS BARU SECARA VERTIKAL.
+        BENAR:
+        A. Jawaban satu
+        B. Jawaban dua
+        C. Jawaban tiga
+        D. Jawaban empat
+        SALAH: A. Jawaban satu B. Jawaban dua C. Jawaban tiga
+      - WAJIB GUNAKAN FORMAT TABEL MARKDOWN untuk PROTA, PROMES, Analisis TP, dan Rubrik. 
+      - Jangan berikan kalimat pengantar. Langsung tuliskan Judul Dokumen.
     `;
 
     const result = await model.generateContentStream(prompt);
@@ -251,6 +224,44 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
 }
 
 // ============================================================================
+// FITUR BARU: GENERATE MEDIA AI (SCRIPT VIDEO & PROMPT GAMBAR)
+// ============================================================================
+export async function* generateMediaAIStream(topik: string, mapel: string, fase: string) {
+  try {
+    const apiKey = await getActiveApiKey();
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-pro", 
+      generationConfig: { temperature: 0.8 },
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      ],
+    });
+
+    const prompt = `
+      Buatkan "Ide Media Pendukung Pembelajaran" untuk materi: ${topik} (Mapel: ${mapel}, Fase: ${fase}).
+      Berikan output dalam 2 bagian menggunakan format Markdown:
+      
+      ### 1. Naskah Video Animasi Pembelajaran (Durasi 1 Menit)
+      Buat script ringkas berupa list/tabel yang berisi kolom Waktu, Visual (apa yang digambar di layar), dan Audio/Narator (apa yang diucapkan). Konsepnya harus menarik untuk siswa usia tersebut.
+
+      ### 2. Prompt Generator Gambar AI
+      Buatkan 2 atau 3 ide prompt yang mendetail dalam bahasa Inggris (cocok untuk dicopypaste ke Midjourney/DALL-E) untuk memvisualisasikan konsep materi ini secara estetis. Awali dengan: [PROMPT: ...]
+    `;
+
+    const result = await model.generateContentStream(prompt);
+    for await (const chunk of result.stream) { 
+      yield chunk.text(); 
+    }
+  } catch (error: any) { 
+    throw new Error(error.message || "Gagal membuat media pendukung."); 
+  }
+}
+
+// ============================================================================
 // FITUR 2: VISION AI (FOTO JADI SOAL)
 // ============================================================================
 export async function* generateSoalFromImageStream(base64Data: string, mimeType: string, fase: string, mapel: string) {
@@ -263,26 +274,14 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
       generationConfig: {
-        maxOutputTokens: 8192, // Napas panjang untuk dokumen 8000 kata
+        maxOutputTokens: 8192, 
         temperature: 0.7,
       },
       safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
       ],
     });
 
@@ -297,8 +296,8 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
 
       ATURAN FORMATTING GLOBAL (SANGAT PENTING):
       - Tuliskan dalam format Markdown yang rapi. 
-      - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$) untuk rumus matematika atau variabel! Tuliskan persamaan murni menggunakan teks biasa agar mudah dibaca di WhatsApp atau Word (Contoh: 3x - 2y = 12).
-      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB diletakkan pada baris yang baru (vertikal ke bawah), BUKAN menyamping di baris yang sama dengan soal.
+      - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$). Tuliskan persamaan murni menggunakan teks biasa (Contoh: 3x - 2y = 12).
+      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB diletakkan pada baris yang baru (vertikal ke bawah), BUKAN menyamping di baris yang sama.
       - Langsung berikan hasilnya tanpa kalimat pengantar.
     `;
 
@@ -336,26 +335,14 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
       generationConfig: {
-        maxOutputTokens: 8192, // Napas panjang untuk dokumen 8000 kata
+        maxOutputTokens: 8192, 
         temperature: 0.7,
       },
       safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
       ],
     });
 
@@ -406,26 +393,14 @@ export async function* chatAssistantStream(history: {role: "user" | "model", par
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
       generationConfig: {
-        maxOutputTokens: 8192, // Napas panjang untuk dokumen 8000 kata
+        maxOutputTokens: 8192,
         temperature: 0.7,
       },
       safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
       ],
     });
 
