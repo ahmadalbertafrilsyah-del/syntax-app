@@ -10,6 +10,9 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
   const pathname = usePathname();
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // STATE BARU: Untuk melipat sidebar di mode Desktop
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -31,7 +34,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
     return () => unsubscribe();
   }, []);
 
-  // MENU GURU (Sudah ditambahkan menu Akademik)
+  // MENU GURU
   const menuItems = [
     { name: "Beranda", path: "/guru", icon: "🏠", mobileName: "Beranda" },
     { name: "Akademik", path: "/guru/akademik", icon: "🎓", mobileName: "Akademik" },
@@ -59,30 +62,51 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
   return (
     <>
       {/* ========================================================= */}
-      {/* DESKTOP SIDEBAR (Bento Floating Style)                      */}
+      {/* DESKTOP SIDEBAR (Bento Floating Style & Collapsible)        */}
       {/* ========================================================= */}
-      <aside className="hidden md:flex flex-col w-[260px] bg-white rounded-[32px] m-4 h-[calc(100vh-32px)] shadow-sm sticky top-4 border border-white/40 overflow-hidden shrink-0">
+      <aside 
+        className={`hidden md:flex flex-col bg-white rounded-[32px] m-4 h-[calc(100vh-32px)] shadow-sm sticky top-4 border border-slate-100 shrink-0 transition-all duration-300 ease-in-out overflow-x-hidden ${isCollapsed ? 'w-[70px]' : 'w-[260px]'}`}
+      >
         
         {/* LOGO AREA */}
-        <div className="p-7 flex items-center justify-center mb-2">
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2.5">
-            <img src="https://i.ibb.co.com/JjK2w93q/LOGO-SYNTAX.png" alt="Logo" className="w-8 h-8 object-contain drop-shadow-sm" />
-            Syntax
-          </h2>
+        <div className={`pt-8 pb-4 flex items-center mb-2 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : 'justify-start px-7'}`}>
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <img src="https://i.ibb.co.com/JjK2w93q/LOGO-SYNTAX.png" alt="Logo" className="w-8 h-8 object-contain shrink-0 drop-shadow-sm" />
+            <h2 className={`text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
+              Syntax
+            </h2>
+          </div>
         </div>
 
         {/* NAV LINKS */}
-        <nav className="flex-1 px-4 pb-6 space-y-6 overflow-y-auto hide-scrollbar">
+        <nav className="flex-1 px-3 space-y-6 overflow-y-auto hide-scrollbar mt-2 relative">
           {role !== "admin" && (
             <div>
-              <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Main Menu</p>
-              <div className="space-y-1.5">
+              {isCollapsed ? (
+                 <div className="h-px w-8 bg-slate-200 mx-auto mb-4 rounded-full"></div>
+              ) : (
+                 <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 whitespace-nowrap">Main Menu</p>
+              )}
+              
+              <div className="space-y-1.5 flex flex-col items-center">
                 {menuItems.map((item) => {
                   const isActive = pathname === item.path;
                   return (
-                    <Link key={item.name} href={item.path} className={`flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all font-bold text-[13px] ${isActive ? "bg-[#1E1E1E] text-white shadow-md shadow-slate-900/20" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}>
-                      <span className={`text-[18px] ${isActive ? '' : 'opacity-80'}`}>{item.icon}</span> 
-                      {item.name}
+                    <Link 
+                      key={item.name} 
+                      href={item.path} 
+                      title={isCollapsed ? item.name : ""} // Tooltip teks pada hover di mode lipat
+                      className={`flex items-center rounded-2xl transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
+                        ${isCollapsed ? 'justify-center p-3 h-12 w-12' : 'gap-3.5 px-4 py-3.5 w-full'}
+                        ${isActive ? "bg-[#1E1E1E] text-white shadow-md shadow-slate-900/20" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}
+                    >
+                      {/* MIKRO-ADJUSTMENT: Ukuran ikon diperkecil dari 18px ke 16px di mode lipat */}
+                      <span className={`shrink-0 ${isCollapsed ? 'text-[16px]' : 'text-[18px] w-6 text-center'} ${isActive ? '' : 'opacity-80'}`}>
+                        {item.icon}
+                      </span>
+                      <span className={`font-bold text-[13px] transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
+                        {item.name}
+                      </span>
                     </Link>
                   );
                 })}
@@ -92,17 +116,34 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
 
           {role === "admin" && (
             <div>
-              <div className="px-3 flex items-center gap-2 mb-4">
-                <p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em]">Admin</p>
-                <div className="h-[2px] flex-1 bg-orange-100 rounded-full"></div>
-              </div>
-              <div className="space-y-1.5">
+              {isCollapsed ? (
+                <div className="h-px w-8 bg-orange-200 mx-auto mb-4 rounded-full"></div>
+              ) : (
+                <div className="px-3 flex items-center gap-2 mb-4 whitespace-nowrap">
+                  <p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em]">Admin</p>
+                  <div className="h-[2px] flex-1 bg-orange-100 rounded-full"></div>
+                </div>
+              )}
+
+              <div className="space-y-1.5 flex flex-col items-center">
                 {adminMenuItems.map((item) => {
                   const isActive = pathname === item.path;
                   return (
-                    <Link key={item.name} href={item.path} className={`flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all font-bold text-[13px] ${isActive ? "bg-[#1E1E1E] text-orange-400 shadow-md shadow-slate-900/20" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}>
-                      <span className={`text-[18px] ${isActive ? '' : 'opacity-80'}`}>{item.icon}</span> 
-                      {item.name}
+                    <Link 
+                      key={item.name} 
+                      href={item.path} 
+                      title={isCollapsed ? item.name : ""}
+                      className={`flex items-center rounded-2xl transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden
+                        ${isCollapsed ? 'justify-center p-3 h-12 w-12' : 'gap-3.5 px-4 py-3.5 w-full'}
+                        ${isActive ? "bg-[#1E1E1E] text-orange-400 shadow-md shadow-slate-900/20" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"}`}
+                    >
+                      {/* MIKRO-ADJUSTMENT: Ukuran ikon diperkecil dari 18px ke 16px di mode lipat */}
+                      <span className={`shrink-0 ${isCollapsed ? 'text-[16px]' : 'text-[18px] w-6 text-center'} ${isActive ? '' : 'opacity-80'}`}>
+                        {item.icon}
+                      </span>
+                      <span className={`font-bold text-[13px] transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
+                        {item.name}
+                      </span>
                     </Link>
                   );
                 })}
@@ -110,6 +151,22 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
             </div>
           )}
         </nav>
+
+        {/* BOTTOM TOGGLE BUTTON (Untuk Melipat Sidebar) */}
+        <div className="p-4 mt-auto border-t border-slate-50 flex justify-center">
+           <button 
+             onClick={() => setIsCollapsed(!isCollapsed)} 
+             title={isCollapsed ? "Perluas Menu" : "Sembunyikan Menu"}
+             className="w-full h-12 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-2xl transition-colors"
+           >
+             <svg 
+               className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} 
+               fill="none" viewBox="0 0 24 24" stroke="currentColor"
+             >
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+             </svg>
+           </button>
+        </div>
       </aside>
 
       {/* ========================================================= */}
@@ -124,9 +181,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
                 {item.icon}
               </span>
               <span className={`text-[9px] font-bold truncate px-1 max-w-full ${
-                isActive 
-                  ? 'text-white' 
-                  : 'text-slate-500'
+                isActive ? 'text-white' : 'text-slate-500'
               }`}>
                 {item.mobileName}
               </span>

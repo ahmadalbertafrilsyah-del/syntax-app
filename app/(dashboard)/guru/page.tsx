@@ -88,7 +88,7 @@ export default function GuruDashboard() {
       {/* ============================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* CARD 1: SISA TOKEN (Ala "Total Revenue" Oranye) */}
+        {/* CARD 1: SISA TOKEN */}
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="lg:col-span-4 bg-gradient-to-br from-[#FF6B4A] to-[#FF4B2B] rounded-[32px] p-8 text-white shadow-[0_20px_40px_rgba(255,107,74,0.2)] flex flex-col justify-between relative overflow-hidden group">
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-6">
@@ -109,11 +109,10 @@ export default function GuruDashboard() {
               💬 Ajukan Tambahan Kuota
             </button>
           </div>
-          {/* Ornamen Latar Melayang */}
           <div className="absolute -bottom-12 -right-12 w-56 h-56 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
         </motion.div>
 
-        {/* CARD 2: COBA FITUR VISION (Emerald/Hijau Style) */}
+        {/* CARD 2: COBA FITUR VISION */}
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="lg:col-span-8 bg-gradient-to-br from-[#10b981] to-[#059669] rounded-[32px] p-8 md:p-10 text-white shadow-[0_20px_40px_rgba(16,185,129,0.2)] flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group">
           <div className="flex-1 relative z-10">
             <span className="bg-white/20 text-white text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full mb-5 inline-block shadow-inner">Fitur Unggulan</span>
@@ -133,7 +132,7 @@ export default function GuruDashboard() {
           <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4"></div>
         </motion.div>
 
-        {/* CARD 3: RIWAYAT DOKUMEN (Ala "Clients" List) */}
+        {/* CARD 3: RIWAYAT DOKUMEN */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-5 bg-white rounded-[32px] p-8 shadow-sm flex flex-col border border-slate-100/50">
           <div className="flex justify-between items-end mb-6">
             <div>
@@ -172,7 +171,7 @@ export default function GuruDashboard() {
           </div>
         </motion.div>
 
-        {/* CARD 4: AI ANALYTICS (Ala "Funnel Health" Progress Bar) */}
+        {/* CARD 4: AI ANALYTICS */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="lg:col-span-7 bg-white rounded-[32px] p-8 shadow-sm border border-slate-100/50 flex flex-col justify-between">
            <div className="flex justify-between items-start mb-8">
             <div>
@@ -212,7 +211,6 @@ export default function GuruDashboard() {
             </div>
           </div>
 
-          {/* Kotak Informasi Tambahan */}
           <div className="mt-8 pt-6 border-t border-slate-100 flex gap-4">
             <div className="flex-1 bg-[#F4F5F7] p-4 rounded-2xl border border-slate-200/50">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Usage</p>

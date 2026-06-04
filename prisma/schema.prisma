@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql" // Menggunakan MySQL untuk cPanel
+  url      = env("DATABASE_URL")
+}
+
+// 1. TABEL PENGGUNA (UID dari Firebase Auth jadi Primary Key di sini)
+model User {
+  id          String       @id 
+  nama        String
+  email       String       @unique
+  role        String       @default("guru")
+  sisa_kuota  Int          @default(100)
+  fotoProfile String?
+  dokumens    Dokumen[]
+  tugas       TugasKelas[]
+  createdAt   DateTime     @default(now())
+}
+
+// 2. TABEL PENYIMPANAN DOKUMEN HASIL GENERATE AI
+model Dokumen {
+  id          String   @id @default(cuid())
+  id_user     String
+  user        User     @relation(fields: [id_user], references: [id])
+  sumber      String?
+  tipe        String
+  fase        String?
+  mapel       String?
+  topik       String?  @db.Text
+  konten_ai   String   @db.LongText // LongText agar muat dokumen sangat panjang
+  namaSekolah String?
+  kotaSekolah String?
+  namaKepsek  String?
+  nipKepsek   String?
+  namaGuru    String?
+  nipGuru     String?
+  dibuat_pada DateTime @default(now())
+}
+
+// 3. TABEL MANAJEMEN KELAS & TUGAS (FITUR AKADEMIK LMS)
+model TugasKelas {
+  id          String         @id @default(cuid())
+  id_guru     String
+  guru        User           @relation(fields: [id_guru], references: [id])
+  judul       String
+  mapel       String
+  kelas       String
+  deadline    String?
+  konten_soal String         @db.LongText
+  status      String         @default("Aktif")
+  submisi     SubmisiSiswa[]
+  dibuat_pada DateTime       @default(now())
+}
+
+// 4. TABEL PENGUMPULAN & NILAI SISWA (AUTO-KOREKTOR)
+model SubmisiSiswa {
+  id           String     @id @default(cuid())
+  id_tugas     String
+  tugas        TugasKelas @relation(fields: [id_tugas], references: [id])
+  uid_siswa    String
+  nama_siswa   String
+  kelas        String
+  status       String     @default("Belum Kumpul")
+  nilai        Int?
+  jawaban_teks String?    @db.Text
+  feedback_ai  String?    @db.Text
+  catatan_guru String?    @db.Text
+  waktu_kumpul DateTime?  @default(now())
+}
+
+// 5. TABEL KNOWLEDGE BASE (RAG KURIKULUM)
+model Kurikulum {
+  id        String   @id @default(cuid())
+  mapel     String
+  fase      String
+  konten    String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+// 6. TABEL INSTRUKSI ADMIN (PROMPT SYSTEM)
+model KurikulumPrompt {
+  id        String   @id // Contoh: 'modul_ajar', 'rpp'
+  prompt    String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+// 7. TABEL PENGATURAN API KEY GEMINI
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  value     String   @db.Text
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// 8. TABEL NOTIFIKASI SISTEM
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   // Bisa disi UID user atau string 'all'
+  title     String
+  message   String   @db.Text
+  type      String   @default("system")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

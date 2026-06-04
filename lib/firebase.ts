@@ -1,9 +1,8 @@
 // lib/firebase.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore"; // Panggil kembali fungsi ini
 
-// Mengambil konfigurasi dari file .env.local
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -13,11 +12,7 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Inisialisasi Firebase
-// Pengecekan getApps().length penting di Next.js agar Firebase tidak 
-// diinisialisasi ulang setiap kali halaman di-refresh (menghindari error)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Ekspor layanan yang akan kita gunakan
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app); // NYALAKAN KEMBALI EXPORT DB
