@@ -1,5 +1,3 @@
-"use server";
-
 import { db } from "@/lib/firebase"; // Memanggil koneksi Firebase Anda
 import { collection, addDoc, doc, updateDoc, getDoc, setDoc, increment } from "firebase/firestore";
 

@@ -2,61 +2,16 @@
 "use server";
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
-import prisma from "./prisma"; // Penghubung ke MySQL cPanel
 
 // ============================================================================
-// FUNGSI INTERNAL: Mengambil Kunci API Aktif dari MySQL
+// FUNGSI INTERNAL: Mengambil Kunci API Murni dari .env
 // ============================================================================
-async function getActiveApiKey(): Promise<string> {
-  try {
-    // Mencari API Key yang statusnya aktif di tabel ApiKey MySQL
-    const activeKey = await prisma.apiKey.findFirst({
-      where: { isActive: true }
-    });
-      
-    if (activeKey && activeKey.value) {
-      console.log(`🔑 Menggunakan API Key dari MySQL: [${activeKey.name}]`);
-      return activeKey.value;
-    }
-  } catch (error) {
-    console.error("⚠️ Gagal membaca API Key dari MySQL, mencoba fallback ke .env...", error);
+function getActiveApiKey(): string {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) {
+    throw new Error("API Key Gemini tidak ditemukan di .env. Hubungi Admin.");
   }
-
-  const fallbackKey = process.env.GEMINI_API_KEY;
-  if (!fallbackKey) {
-    throw new Error("API Key Gemini tidak ditemukan di Database maupun di .env. Hubungi Admin.");
-  }
-  console.log("🔑 Menggunakan API Key dari .env (Fallback)");
-  return fallbackKey;
-}
-
-// ============================================================================
-// FUNGSI INTERNAL: Mengambil Prompt/Instruksi dari MySQL
-// ============================================================================
-async function getAdminPrompt(tipeDokumen: string): Promise<string | null> {
-  let docId = "";
-  if (tipeDokumen.includes("Modul")) docId = "modul_ajar";
-  else if (tipeDokumen.includes("RPP")) docId = "rpp";
-  else if (tipeDokumen.includes("Alur TP") || tipeDokumen.includes("ATP")) docId = "alur_tp";
-  else if (tipeDokumen.includes("PROTA")) docId = "prota";
-  else if (tipeDokumen.includes("PROMES")) docId = "promes";
-  else if (tipeDokumen.includes("Soal")) docId = "bank_soal";
-  else if (tipeDokumen.includes("Rubrik")) docId = "rubrik";
-  else return null;
-
-  try {
-    const promptData = await prisma.kurikulumPrompt.findUnique({
-      where: { id: docId }
-    });
-    
-    if (promptData && promptData.prompt) {
-      console.log(`📑 Menggunakan instruksi AI khusus Admin untuk: ${tipeDokumen}`);
-      return promptData.prompt;
-    }
-  } catch (error) {
-    console.error("⚠️ Gagal membaca prompt kurikulum admin:", error);
-  }
-  return null;
+  return key;
 }
 
 // ============================================================================
@@ -67,30 +22,11 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
     console.log(`\n--- MEMULAI PROSES AI (MODE STREAMING) ---`);
     console.log(`Request: ${tipe} | ${mapel} | ${fase} | ${topik} | ${sumber}`);
 
-    const apiKey = await getActiveApiKey();
+    // Langsung tembak ke .env tanpa melewati MySQL
+    const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
 
     let konteksKurikulum = "Gunakan pengetahuan umum Kurikulum Merdeka.";
-    try {
-      const faseSingkat = fase.split(" ")[0] + " " + fase.split(" ")[1]; 
-      
-      // Pencarian RAG di tabel Kurikulum MySQL
-      const kurikulumData = await prisma.kurikulum.findFirst({
-        where: {
-          mapel: mapel,
-          fase: faseSingkat
-        }
-      });
-      
-      if (kurikulumData) {
-        konteksKurikulum = kurikulumData.konten;
-        console.log("✅ RAG MySQL Berhasil: Referensi kurikulum ditemukan.");
-      }
-    } catch (dbError) {
-      console.log("⚠️ Menggunakan database pengetahuan bawaan AI...");
-    }
-
-    let instruksiSistem = await getAdminPrompt(tipe);
     let profilPelajar = "Profil Pelajar Pancasila (P5)";
     let tambahanInstruksiSumber = "";
 
@@ -106,34 +42,30 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
       tambahanInstruksiSumber = "FOKUS RUJUKAN: Gunakan pendekatan Pendidikan Inklusif. Rancang langkah pembelajaran agar ramah untuk Anak Berkebutuhan Khusus (ABK) namun tetap relevan untuk siswa reguler.";
     }
 
-    if (!instruksiSistem) {
-      console.log(`ℹ️ Menggunakan instruksi default (fallback) untuk: ${tipe}`);
-      instruksiSistem = ""; 
-      
-      if (tipe === "PROTA") {
-        instruksiSistem = `- FORMAT WAJIB PROTA (Program Tahunan): Buat gambaran umum alokasi waktu 1 tahun. Wajib memuat: 1. Identitas, 2. Capaian Pembelajaran, 3. Daftar Materi/TP, 4. Alokasi Waktu (JP).`;
-      } 
-      else if (tipe === "PROMES") {
-        instruksiSistem = `- FORMAT WAJIB PROMES / PROSEM: Buat dalam format matriks/tabel. Wajib memuat: Identitas, Daftar TP, Alokasi Waktu Total, dan Distribusi Waktu (matriks minggu/bulan).`;
-      } 
-      else if (tipe === "Analisis TP") {
-        instruksiSistem = `- FORMAT WAJIB ANALISIS TP: Bedah CP menjadi TP spesifik dalam format tabel.`;
-      } 
-      else if (tipe === "Alur TP (ATP)") {
-        instruksiSistem = `- FORMAT WAJIB ATP (Alur Tujuan Pembelajaran): Susun urutan TP yang logis dari paling dasar hingga kompleks lengkap dengan alokasi JP.`;
-      } 
-      else if (tipe === "Modul Ajar (PPM)") {
-        instruksiSistem = `- FORMAT WAJIB MODUL AJAR: Lengkap, padat, dan efisien. Jangan bertele-tele agar tidak terpotong. Memuat: 1. Info Umum, 2. Komponen Inti, 3. Lampiran/Asesmen.`;
-      } 
-      else if (tipe === "RPP") {
-        instruksiSistem = `- FORMAT WAJIB RPP: Sangat ringkas, padat, 1 lembar. HANYA memuat: Tujuan, Langkah Inti, dan Penilaian.`;
-      }
-      else if (tipe === "Bank Soal") {
-        instruksiSistem = `- FORMAT WAJIB BANK SOAL: Sertakan Kisi-kisi ringkas, Kumpulan Soal sesuai parameter, dan KUNCI JAWABAN lengkap di akhir.`;
-      } 
-      else if (tipe === "Rubrik Penilaian") {
-        instruksiSistem = `- FORMAT WAJIB RUBRIK PENILAIAN: Buat tabel rubrik dengan kriteria capaian berskala (Mulai Berkembang hingga Mahir).`;
-      }
+    let instruksiSistem = ""; 
+    if (tipe === "PROTA") {
+      instruksiSistem = `- FORMAT WAJIB PROTA (Program Tahunan): Buat gambaran umum alokasi waktu 1 tahun. Wajib memuat: 1. Identitas, 2. Capaian Pembelajaran, 3. Daftar Materi/TP, 4. Alokasi Waktu (JP).`;
+    } 
+    else if (tipe === "PROMES") {
+      instruksiSistem = `- FORMAT WAJIB PROMES / PROSEM: Buat dalam format matriks/tabel. Wajib memuat: Identitas, Daftar TP, Alokasi Waktu Total, dan Distribusi Waktu (matriks minggu/bulan).`;
+    } 
+    else if (tipe === "Analisis TP") {
+      instruksiSistem = `- FORMAT WAJIB ANALISIS TP: Bedah CP menjadi TP spesifik dalam format tabel.`;
+    } 
+    else if (tipe === "Alur TP (ATP)") {
+      instruksiSistem = `- FORMAT WAJIB ATP (Alur Tujuan Pembelajaran): Susun urutan TP yang logis dari paling dasar hingga kompleks lengkap dengan alokasi JP.`;
+    } 
+    else if (tipe === "Modul Ajar (PPM)") {
+      instruksiSistem = `- FORMAT WAJIB MODUL AJAR: Lengkap, padat, dan efisien. Jangan bertele-tele agar tidak terpotong. Memuat: 1. Info Umum, 2. Komponen Inti, 3. Lampiran/Asesmen.`;
+    } 
+    else if (tipe === "RPP") {
+      instruksiSistem = `- FORMAT WAJIB RPP: Sangat ringkas, padat, 1 lembar. HANYA memuat: Tujuan, Langkah Inti, dan Penilaian.`;
+    }
+    else if (tipe === "Bank Soal") {
+      instruksiSistem = `- FORMAT WAJIB BANK SOAL: Sertakan Kisi-kisi ringkas, Kumpulan Soal sesuai parameter, dan KUNCI JAWABAN lengkap di akhir.`;
+    } 
+    else if (tipe === "Rubrik Penilaian") {
+      instruksiSistem = `- FORMAT WAJIB RUBRIK PENILAIAN: Buat tabel rubrik dengan kriteria capaian berskala (Mulai Berkembang hingga Mahir).`;
     }
 
     const model = genAI.getGenerativeModel({ 
@@ -189,7 +121,7 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
 // ============================================================================
 export async function* continueGenerationStream(teksTerakhir: string) {
   try {
-    const apiKey = await getActiveApiKey();
+    const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-pro",
@@ -234,7 +166,7 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
     console.log(`\n--- MEMULAI VISION AI STREAMING ---`);
     console.log(`Request: ${mapel} | ${fase} | Image MimeType: ${mimeType}`);
 
-    const apiKey = await getActiveApiKey();
+    const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
@@ -282,7 +214,7 @@ export async function* generateSoalFromImageStream(base64Data: string, mimeType:
 // ============================================================================
 export async function* generateMediaAIStream(topik: string, mapel: string, fase: string) {
   try {
-    const apiKey = await getActiveApiKey();
+    const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro", 
@@ -318,7 +250,7 @@ export async function* generateMediaAIStream(topik: string, mapel: string, fase:
 // ============================================================================
 export async function* evaluateEssayStream(mapel: string, topik: string, kunciJawaban: string, jawabanSiswa: string) {
   try {
-    const apiKey = await getActiveApiKey();
+    const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
@@ -356,7 +288,7 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
 // ============================================================================
 export async function* chatAssistantStream(history: {role: "user" | "model", parts: {text: string}[]}[], newMessage: string) {
   try {
-    const apiKey = await getActiveApiKey();
+    const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
