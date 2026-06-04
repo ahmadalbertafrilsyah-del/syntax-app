@@ -1,72 +1,74 @@
 "use server";
 
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase"; // Memanggil koneksi Firebase Anda
+import { collection, addDoc, doc, updateDoc, getDoc, setDoc, increment } from "firebase/firestore";
 
 export async function saveDokumen(data: any) {
   try {
-    const newDoc = await prisma.dokumen.create({
-      data: {
-        id_user: data.id_user,
-        sumber: data.sumber,
-        tipe: data.tipe,
-        fase: data.fase,
-        mapel: data.mapel,
-        topik: data.topik,
-        konten_ai: data.konten_ai,
-        namaSekolah: data.namaSekolah,
-        kotaSekolah: data.kotaSekolah,
-        namaKepsek: data.namaKepsek,
-        nipKepsek: data.nipKepsek,
-        namaGuru: data.namaGuru,
-        nipGuru: data.nipGuru,
-      }
+    // 1. Menyimpan dokumen ke dalam koleksi 'dokumen' di Firestore
+    const docRef = await addDoc(collection(db, "dokumen"), {
+      id_user: data.id_user,
+      sumber: data.sumber,
+      tipe: data.tipe,
+      fase: data.fase,
+      mapel: data.mapel,
+      topik: data.topik,
+      konten_ai: data.konten_ai,
+      namaSekolah: data.namaSekolah,
+      kotaSekolah: data.kotaSekolah,
+      namaKepsek: data.namaKepsek,
+      nipKepsek: data.nipKepsek,
+      namaGuru: data.namaGuru,
+      nipGuru: data.nipGuru,
+      createdAt: new Date().toISOString()
     });
 
-    await prisma.user.update({
-      where: { id: data.id_user },
-      data: { sisa_kuota: { decrement: 1 } }
+    // 2. Operasi pemotongan token (sisa_kuota) di koleksi 'users'
+    const userRef = doc(db, "users", data.id_user);
+    await updateDoc(userRef, {
+      sisa_kuota: increment(-1) // Secara otomatis mengurangi 1 dari database
     });
 
-    return newDoc.id;
+    return docRef.id;
   } catch (error) {
-    console.error("Gagal menyimpan dokumen ke MySQL:", error);
+    console.error("Gagal menyimpan dokumen ke Firebase:", error);
     throw new Error("Gagal menyimpan dokumen");
   }
 }
 
 export async function updateDokumenKonten(docId: string, konten: string) {
   try {
-    await prisma.dokumen.update({
-      where: { id: docId },
-      data: { konten_ai: konten }
+    const docRef = doc(db, "dokumen", docId);
+    await updateDoc(docRef, {
+      konten_ai: konten,
+      updatedAt: new Date().toISOString()
     });
     return true;
   } catch (error) {
-    console.error("Gagal update dokumen di MySQL:", error);
+    console.error("Gagal update dokumen di Firebase:", error);
     throw new Error("Gagal update dokumen");
   }
 }
 
 export async function syncUserToDatabase(uid: string, email: string, nama: string) {
   try {
-    let user = await prisma.user.findUnique({
-      where: { id: uid }
-    });
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
 
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          id: uid,
-          email: email,
-          nama: nama,
-          role: "guru",
-          sisa_kuota: 50,
-        }
+    // Jika user baru pertama kali login, buatkan datanya dan beri 50 token gratis
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        id: uid,
+        email: email,
+        nama: nama,
+        role: "guru",
+        sisa_kuota: 50,
+        createdAt: new Date().toISOString()
       });
     }
     return true;
   } catch (error) {
-    console.error("Gagal sinkronisasi user ke MySQL:", error);
+    console.error("Gagal sinkronisasi user ke Firebase:", error);
     throw new Error("Gagal menyimpan data user");
   }
 }
