@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import ChatWidget from "@/components/ChatWidget"; // 👈 SUNTIKAN WIDGET CHAT AI
 
 export default function GuruDashboard() {
   const { user } = useAuth();
@@ -226,6 +227,10 @@ export default function GuruDashboard() {
         </motion.div>
 
       </div>
+
+      {/* 👈 PEMANGGILAN KOMPONEN CHAT WIDGET DI SINI */}
+      <ChatWidget />
+      
     </div>
   );
 }

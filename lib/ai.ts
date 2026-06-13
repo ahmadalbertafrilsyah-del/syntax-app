@@ -288,19 +288,35 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
 // ============================================================================
 export async function* chatAssistantStream(history: {role: "user" | "model", parts: {text: string}[]}[], newMessage: string) {
   try {
-    const apiKey = getActiveApiKey();
+    // Mengambil API Key dari .env (Sesuaikan jika Anda menggunakan getActiveApiKey())
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("API Key Gemini tidak ditemukan.");
+    }
+
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-pro",
       generationConfig: { maxOutputTokens: 8192, temperature: 0.7 },
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      ],
     });
 
+    // Memulai sesi chat dengan riwayat sebelumnya
     const chat = model.startChat({ history: history });
-    const promptSistem = `Sebagai 'Asisten Syntax', jawab pesan ini dengan ramah, ringkas, dan fokus membantu guru terkait ide mengajar. Pesan: ${newMessage}`;
     
-    const result = await chat.sendMessageStream(promptSistem);
-    for await (const chunk of result.stream) { yield chunk.text(); }
+    // Mengirim pesan baru (yang sudah digabung dengan scope Admin dari ChatWidget)
+    const result = await chat.sendMessageStream(newMessage);
+    
+    for await (const chunk of result.stream) { 
+      yield chunk.text(); 
+    }
   } catch (error: any) {
+    console.error("🛑 ERROR CHAT AI:", error);
     throw new Error("Maaf, Asisten Syntax sedang sibuk. Coba beberapa saat lagi.");
   }
 }

@@ -1,152 +1,209 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { chatAssistantStream } from "@/lib/ai";
-import ReactMarkdown from "react-markdown";
-
-type Message = { role: "user" | "model"; text: string };
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { chatAssistantStream } from "@/lib/ai"; 
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "model", text: "Halo Pendidik Hebat! 👋 Ada yang bisa saya bantu untuk kelas Anda hari ini?" }
+  const [messages, setMessages] = useState<{ role: "user" | "model", text: string, time: string }[]>([
+    { 
+      role: "model", 
+      text: "Halo! Saya Asisten Syntax. Ada materi atau ide mengajar yang ingin didiskusikan hari ini?",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
   ]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  
+  const [isLoading, setIsLoading] = useState(false);
+  const [adminScope, setAdminScope] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll ke bawah setiap ada pesan baru
+  // Mengambil instruksi batasan AI dari Admin di Firebase
+  useEffect(() => {
+    const fetchAdminScope = async () => {
+      try {
+        const scopeDoc = await getDoc(doc(db, "settings", "chatbot_scope"));
+        if (scopeDoc.exists()) {
+          setAdminScope(scopeDoc.data().prompt || "");
+        }
+      } catch (error) {
+        console.error("Gagal memuat scope admin:", error);
+      }
+    };
+    fetchAdminScope();
+  }, []);
+
+  // Auto-scroll ke pesan terbaru
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isTyping) return;
-
-    const userMessage = input.trim();
-    setInput("");
+  const handleSend = async () => {
+    if (!input.trim()) return;
     
-    // Tambahkan pesan user ke layar
-    setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
-    setIsTyping(true);
-
-    // KUNCI PERBAIKAN: Potong pesan sapaan pertama (index ke-0) agar history murni diawali oleh "user"
-    const history = messages
-      .slice(1) 
-      .map(msg => ({
-        role: msg.role,
-        parts: [{ text: msg.text }]
-      }));
+    const userText = input;
+    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    setInput("");
+    setMessages(prev => [...prev, { role: "user", text: userText, time: currentTime }]);
+    setIsLoading(true);
 
     try {
-      const stream = await chatAssistantStream(history, userMessage);
-      
-      // Siapkan tempat kosong untuk balasan AI
-      setMessages((prev) => [...prev, { role: "model", text: "" }]);
+      const historyToSend = messages.map(m => ({
+        role: m.role,
+        parts: [{ text: m.text }]
+      }));
+
+      const contextualMessage = adminScope 
+        ? `[INSTRUKSI ADMIN UNTUKMU: ${adminScope}] \n\nPertanyaan User: ${userText}`
+        : userText;
+
+      const stream = await chatAssistantStream(historyToSend, contextualMessage);
       
       let aiResponse = "";
+      setMessages(prev => [...prev, { role: "model", text: "", time: currentTime }]); 
+
       for await (const chunk of stream) {
         aiResponse += chunk;
-        // Update pesan terakhir (pesan AI) secara real-time
-        setMessages((prev) => {
+        setMessages(prev => {
           const newMessages = [...prev];
           newMessages[newMessages.length - 1].text = aiResponse;
           return newMessages;
         });
       }
     } catch (error) {
-      setMessages((prev) => [...prev, { role: "model", text: "Maaf, koneksi saya sedang terganggu. 😔 Pastikan koneksi internet Anda stabil." }]);
-      console.error(error);
+      setMessages(prev => [...prev, { 
+        role: "model", 
+        text: "Maaf, sistem komunikasi sedang terganggu. Coba lagi nanti.",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
     } finally {
-      setIsTyping(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-50 font-sans">
       <AnimatePresence>
         {isOpen && (
           <motion.div 
-            initial={{ opacity: 0, y: 20, scale: 0.9 }} 
+            initial={{ opacity: 0, y: 20, scale: 0.95 }} 
             animate={{ opacity: 1, y: 0, scale: 1 }} 
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="absolute bottom-20 right-0 w-[calc(100vw-3rem)] sm:w-[400px] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col"
-            style={{ height: "500px", maxHeight: "80vh" }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            // 🔥 PERBAIKAN RESPONSIVE DI BARIS INI: menambahkan max-h-[calc(100vh-130px)] dan origin-bottom-right
+            className="bg-[#E4EBEF] w-[360px] h-[550px] max-h-[calc(100vh-130px)] mb-4 rounded-[20px] shadow-[0_10px_40px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden border border-slate-200/60 transform origin-bottom-right"
           >
-            {/* Header Chat */}
-            <div className="bg-indigo-600 p-4 flex justify-between items-center text-white">
+            {/* ================= HEADER ALA TELEGRAM ================= */}
+            <div className="bg-white px-4 py-3 flex items-center justify-between shadow-sm z-10 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">🤖</div>
+                <div className="relative">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#3390EC] to-[#1E6BBA] rounded-full flex items-center justify-center text-white text-lg shadow-sm">
+                    🤖
+                  </div>
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                </div>
                 <div>
-                  <h3 className="font-bold text-sm">Asisten Syntax</h3>
-                  <p className="text-xs text-indigo-200">Online & Siap Membantu</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-[15px] text-slate-800 leading-none">Asisten Syntax</h3>
+                    <span className="bg-[#3390EC]/10 text-[#3390EC] text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">BOT</span>
+                  </div>
+                  <p className="text-[12px] text-[#3390EC] font-medium mt-1">online</p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition">
-                ✕
+              <button 
+                onClick={() => setIsOpen(false)} 
+                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
 
-            {/* Area Pesan */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+            {/* ================= AREA PESAN ================= */}
+            <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-[url('https://web.telegram.org/a/chat-bg-pattern-light.png')] bg-cover bg-center">
+              <div className="text-center my-2">
+                <span className="bg-black/10 text-black/50 text-[11px] font-bold px-3 py-1 rounded-full backdrop-blur-sm">
+                  Hari ini
+                </span>
+              </div>
+
               {messages.map((msg, idx) => (
-                <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
-                    msg.role === "user" 
-                      ? "bg-indigo-600 text-white rounded-tr-sm" 
-                      : "bg-white border border-slate-100 text-slate-700 rounded-tl-sm shadow-sm prose prose-sm prose-indigo"
-                  }`}>
-                    {msg.role === "user" ? (
-                      msg.text
-                    ) : (
-                      <ReactMarkdown>{msg.text}</ReactMarkdown>
-                    )}
+                <div key={idx} className={`flex flex-col ${msg.role === "user" ? 'items-end' : 'items-start'} max-w-[85%] ${msg.role === "user" ? 'ml-auto' : 'mr-auto'}`}>
+                  <div 
+                    className={`relative px-3.5 py-2 text-[14px] leading-relaxed shadow-sm
+                    ${msg.role === "user" 
+                      ? 'bg-[#EEFFDE] text-slate-800 rounded-[16px] rounded-br-sm' 
+                      : 'bg-white text-slate-800 rounded-[16px] rounded-bl-sm border border-slate-100'}`}
+                  >
+                    <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br/>') }} />
+                    
+                    <div className={`text-[10px] mt-1 flex items-center gap-1 justify-end ${msg.role === "user" ? 'text-[#4A9F54]' : 'text-slate-400'}`}>
+                      {msg.time}
+                      {msg.role === "user" && (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-slate-100 text-slate-400 p-3 rounded-2xl rounded-tl-sm shadow-sm text-xs font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span>
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></span>
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></span>
+              
+              {isLoading && (
+                <div className="flex items-start max-w-[85%] mr-auto">
+                  <div className="bg-white px-4 py-3 rounded-[16px] rounded-bl-sm shadow-sm border border-slate-100 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: "0.15s" }}></div>
+                    <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: "0.3s" }}></div>
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Form Input */}
-            <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-slate-100 flex items-center gap-2">
+            {/* ================= INPUT CHAT ================= */}
+            <div className="bg-white p-3 flex items-center gap-2 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.02)] shrink-0">
+              <button className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-[#3390EC] transition-colors rounded-full hover:bg-slate-50 shrink-0">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+              </button>
+              
               <input 
                 type="text" 
-                value={input} 
+                value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Tanya ide ice-breaking, kuis..." 
-                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-full text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                disabled={isTyping}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Tulis pesan..." 
+                className="flex-1 bg-transparent text-[14px] text-slate-800 placeholder-slate-400 outline-none px-1"
               />
-              <button 
-                type="submit" 
-                disabled={!input.trim() || isTyping}
-                className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-indigo-700 transition"
-              >
-                <svg className="w-4 h-4 translate-x-[-1px] translate-y-[1px]" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
-              </button>
-            </form>
+              
+              {input.trim() ? (
+                <button 
+                  onClick={handleSend}
+                  disabled={isLoading}
+                  className="w-10 h-10 flex items-center justify-center bg-[#3390EC] text-white rounded-full hover:bg-[#2A7DCB] transition-colors shrink-0 shadow-sm disabled:opacity-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="translate-x-[-1px] translate-y-[1px]"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+              ) : (
+                <button className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-[#3390EC] transition-colors rounded-full hover:bg-slate-50 shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Tombol Melayang */}
+      {/* ================= TOMBOL FLOATING ================= */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 hover:scale-110 active:scale-95 transition-transform"
+        className="w-16 h-16 bg-[#3390EC] text-white rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(51,144,236,0.4)] hover:scale-105 active:scale-95 transition-all ml-auto"
       >
-        {isOpen ? "✕" : <span className="text-2xl">💬</span>}
+        {isOpen ? (
+           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        )}
       </button>
     </div>
   );
