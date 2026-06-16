@@ -121,14 +121,14 @@ export default function KoleksiPage() {
               className="w-full py-2 md:py-2.5 px-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[11px] md:text-sm font-bold text-slate-600 transition-all appearance-none shadow-sm cursor-pointer h-9 md:h-10 truncate"
             >
               <option value="Semua">Semua</option>
-              <option value="Modul Ajar (PPM)">Modul</option>
+              <option value="Modul Ajar (PPM)">Modul Ajar</option>
               <option value="RPP">RPP</option>
               <option value="Alur TP (ATP)">ATP</option>
               <option value="Analisis TP">Analisis TP</option>
               <option value="PROMES">PROMES</option>
               <option value="PROTA">PROTA</option>
               <option value="Bank Soal">Soal</option>
-              <option value="Rubrik Penilaian">Rubrik</option>
+              <option value="Penilaian">Rubrik</option>
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>

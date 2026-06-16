@@ -80,10 +80,10 @@ export default function GuruDashboard() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 15) return "Good afternoon";
-    if (hour < 19) return "Good evening";
-    return "Good night";
+    if (hour < 12) return "Good Morning";
+    if (hour < 15) return "Good Afternoon";
+    if (hour < 19) return "Good Evening";
+    return "Good Night";
   };
 
   if (loading) return <div className="p-8 animate-pulse text-slate-400 font-bold">Memuat command center...</div>;

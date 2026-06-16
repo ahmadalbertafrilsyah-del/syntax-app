@@ -15,17 +15,14 @@ import rehypeRaw from "rehype-raw";
 export default function GeneratorPage() {
   const { user } = useAuth(); 
 
-  // Poin 1 & 8: Referensi Dasar (KMA 1503 2025)
   const [sumber, setSumber] = useState("Kemendikbud Ristek"); 
   const [tipe, setTipe] = useState("Modul Ajar (PPM)");
   const [fase, setFase] = useState("");
   const [mapel, setMapel] = useState("");
   
-  // Poin 2: Topik Ganda (Manual & Dropdown Rekomendasi)
   const [topik, setTopik] = useState("");
   const [topikPilihan, setTopikPilihan] = useState("");
 
-  // Poin 4: Identitas
   const [namaSekolah, setNamaSekolah] = useState("");
   const [kotaSekolah, setKotaSekolah] = useState(""); 
   const [namaKepsek, setNamaKepsek] = useState("");
@@ -46,26 +43,23 @@ export default function GeneratorPage() {
   const [jenisTugas, setJenisTugas] = useState("");
   const [aspekPenilaian, setAspekPenilaian] = useState("");
 
-  // Poin 5: Media Ajar
   const [mediaAjar, setMediaAjar] = useState("");
   const [customMediaAjar, setCustomMediaAjar] = useState("");
 
-  // Poin 6: Asesmen Tertulis
   const [jenisUjian, setJenisUjian] = useState("Asesmen Formatif");
   const [kesulitanSoal, setKesulitanSoal] = useState("Campuran HOTS dan LOTS");
   const [opsiPG, setOpsiPG] = useState("A - D (4 Opsi)");
-  const [jmlPG, setJmlPG] = useState("5"); // Default disesuaikan
+  const [jmlPG, setJmlPG] = useState("5"); 
   const [jmlPGK, setJmlPGK] = useState("0");
   const [jmlMenjodohkan, setJmlMenjodohkan] = useState("0");
   const [jmlBenarSalah, setJmlBenarSalah] = useState("0");
   const [jmlIsian, setJmlIsian] = useState("0");
-  const [jmlUraian, setJmlUraian] = useState("5"); // Default disesuaikan
+  const [jmlUraian, setJmlUraian] = useState("5"); 
   
   const [dokumenTerakhir, setDokumenTerakhir] = useState(""); 
   const [gunakanKonteks, setGunakanKonteks] = useState(true); 
   
   const [isLoading, setIsLoading] = useState(false);
-  // Poin 3: Loading Persentase
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [hasil, setHasil] = useState("");
   const [isStreaming, setIsStreaming] = useState(false); 
@@ -77,7 +71,6 @@ export default function GeneratorPage() {
 
   const pdfRef = useRef<HTMLDivElement>(null);
 
-  // DATA SELECTOR
   const p5Kemendikbud = ["Semua Dimensi P5", "Beriman, Bertakwa & Berakhlak Mulia", "Berkebinekaan Global", "Bergotong Royong", "Mandiri", "Bernalar Kritis", "Kreatif"];
   const p5Kemenag = ["Semua Nilai P5 & PPRA", "Berkeadaban (Ta'addub)", "Keteladanan (Qudwah)", "Kewarganegaraan (Muwatana)", "Mengambil jalan tengah (Tawassut)", "Berimbang (Tawazun)", "Lurus dan tegas (I'tidal)", "Kesetaraan (Musawa)", "Musyawarah (Syura)", "Toleransi (Tasamuh)", "Dinamis dan inovatif (Tathawwur)"];
   
@@ -89,7 +82,6 @@ export default function GeneratorPage() {
 
   const mediaModern = ["Canva Presentation", "Quizziz / Kahoot", "Video YouTube / TikTok Edukasi", "Wordwall / Educandy", "Padlet / Miro (Kolaborasi)", "Alat Peraga Fisik / Lingkungan Sekitar", "Lainnya (Custom)"];
 
-  // Simulasi Persentase Loading
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isLoading && !isStreaming) {
@@ -106,7 +98,6 @@ export default function GeneratorPage() {
     return () => clearInterval(interval);
   }, [isLoading, isStreaming]);
 
-  // Handle otomatis tahun pelajaran
   useEffect(() => {
     const d = new Date();
     const curYear = d.getFullYear();
@@ -120,7 +111,6 @@ export default function GeneratorPage() {
     e.preventDefault();
     if (!user) { alert("Sesi Anda telah berakhir."); return; }
     
-    // Poin 2: Gabungkan topik jika keduanya diisi
     const finalTopik = topikPilihan && topik ? `${topikPilihan} - ${topik}` : topikPilihan || topik;
     if (!finalTopik) { alert("Pilih atau ketik topik pembelajaran!"); return; }
 
@@ -128,7 +118,6 @@ export default function GeneratorPage() {
     let teksLengkap = ""; 
 
     try {
-      // Poin 4 & 8: Inject Instruksi Ketat ke AI
       let topikKirim = `[INSTRUKSI SISTEM]: Patuhi format standar nasional secara ketat. Jika ada kolom Institusi/Sekolah, gunakan "${namaSekolah || '[Nama Institusi]'}". Jika ada Tahun Penyusunan, gunakan "${new Date().getFullYear()}".\n\nTopik Utama: ${finalTopik}\n`;
 
       if (tipe === "Modul Ajar (PPM)" || tipe === "RPP") {
@@ -137,11 +126,9 @@ export default function GeneratorPage() {
         if (alokasiWaktu !== "") topikKirim += `- Alokasi Waktu: ${alokasiWaktu}\n`;
         if (profilPelajar !== "") topikKirim += `- Fokus P5/PPRA: Wajib jabarkan penerapan nilai "${profilPelajar}" dalam skenario pembelajaran.\n`;
         
-        // Poin 5: Inject Media Ajar
         const finalMedia = mediaAjar === "Lainnya (Custom)" ? customMediaAjar : mediaAjar;
         if (finalMedia) topikKirim += `- Media Ajar Spesifik: Gunakan dan integrasikan alat "${finalMedia}" di bagian kegiatan inti.\n`;
 
-        // Poin 6: Tambahkan Instruksi Asesmen Tertulis jika RPP/Modul
         topikKirim += `- Asesmen Formatif: Buatlah soal PG 5 butir dan Esai 5 butir. Tambahkan kalimat "Untuk membuat paket instrumen asesmen yang lebih komprehensif, silakan gunakan menu [Bank Soal] pada Syntax HDE." di bagian bawah rubrik asesmen.\n`;
       } 
       else if (tipe === "Analisis TP" || tipe === "Alur TP (ATP)") {
@@ -166,7 +153,6 @@ export default function GeneratorPage() {
         topikKirim += `\n[Konteks Dokumen Sebelumnya Agar Selaras]:\n${dokumenTerakhir.substring(0, 2500)}...`;
       }
 
-      // Mulai Generate
       const streamResult = await generatePerangkatAjar(tipe, fase, mapel, topikKirim, sumber);
       setIsLoading(false); setIsStreaming(true);
 
@@ -177,7 +163,6 @@ export default function GeneratorPage() {
 
       setIsStreaming(false); setDokumenTerakhir(teksLengkap); 
 
-      // MENGGUNAKAN SERVER ACTION (PRISMA/MYSQL) UNTUK MENYIMPAN DATA
       const payload = {
         id_user: user.uid, sumber, tipe, fase, mapel, topik: finalTopik, konten_ai: teksLengkap, 
         namaSekolah, kotaSekolah, namaKepsek, nipKepsek, namaGuru, nipGuru,
@@ -226,12 +211,12 @@ export default function GeneratorPage() {
   const handleCopyText = () => { navigator.clipboard.writeText(hasil); alert("Teks disalin!"); };
   const handleShareFlipbook = () => { if (docId) { window.open(`${window.location.origin}/share/flipbook/${docId}`, '_blank'); } };
 
-  // Poin 7: Ekspor Word dan PDF Diperbaiki
+  // 🔥 FUNGSI UNDUH WORD DIPERBARUI
   const handleDownloadWord = () => {
     if (!pdfRef.current) return;
     
-    // Hilangkan tag HMTL yang berantakan, ekstrak isi spesifik
     let printHtml = pdfRef.current.innerHTML;
+    printHtml = printHtml.replace(/class="markdown-body"/g, '');
     
     const header = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -246,6 +231,8 @@ export default function GeneratorPage() {
           h2 { font-size: 14pt !important; font-weight: bold !important; margin-top: 18pt; margin-bottom: 6pt; }
           h3 { font-size: 12pt !important; font-weight: bold !important; margin-top: 12pt; }
           p, ul, ol { margin-bottom: 10pt; line-height: 1.5; }
+          /* Fix khusus list di Word agar tidak nabrak */
+          li { margin-bottom: 4pt; } 
           table { width: 100%; border-collapse: collapse; margin-top: 15pt; margin-bottom: 15pt; border: 1pt solid black !important; }
           td, th { border: 1pt solid black !important; padding: 5pt 8pt; vertical-align: top; text-align: left; }
           th { background-color: #f1f5f9; font-weight: bold !important; }
@@ -258,11 +245,12 @@ export default function GeneratorPage() {
     const fileDownload = document.createElement("a"); 
     document.body.appendChild(fileDownload); 
     fileDownload.href = source; 
-    fileDownload.download = `${tipe}_${mapel}.doc`; 
+    fileDownload.download = `${tipe}_${mapel}.doc`.replace(/[^a-zA-Z0-9.\-_]/g, "_"); 
     fileDownload.click(); 
     document.body.removeChild(fileDownload);
   };
 
+  // 🔥 FUNGSI CETAK PDF DIPERBARUI
   const handlePrintPDF = () => {
     const printContent = pdfRef.current?.innerHTML;
     if (!printContent) return;
@@ -284,7 +272,8 @@ export default function GeneratorPage() {
           th { background-color: #f1f5f9; font-weight: bold; }
           tr { page-break-inside: avoid; }
           h2, h3, h4 { page-break-after: avoid; margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: bold; }
-          ul, ol { margin-left: 20px; }
+          ul, ol { margin-left: 20px; margin-bottom: 10px; }
+          li { margin-bottom: 4px; }
           .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }
         </style>
       </head>
@@ -357,7 +346,6 @@ export default function GeneratorPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
-                {/* Poin 1: Sumber Diubah sesuai instruksi */}
                 <label className="block text-[13px] font-bold mb-2 text-slate-700">Sumber Referensi Dasar</label>
                 <select value={sumber} onChange={(e) => setSumber(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:border-indigo-500">
                   <option value="Kementerian Agama">Kementerian Agama (KMA 1503 2025)</option>
@@ -410,7 +398,6 @@ export default function GeneratorPage() {
                         {metode === "Lainnya (Custom)" && <input type="text" value={customMetode} onChange={(e) => setCustomMetode(e.target.value)} placeholder="Ketik model..." className="w-full mt-3 p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm" />}
                       </div>
                       
-                      {/* Poin 5: Media Ajar Baru */}
                       <div>
                         <label className="block text-[12px] font-bold text-emerald-800 mb-2">Rekomendasi Media Ajar</label>
                         <select value={mediaAjar} onChange={(e) => setMediaAjar(e.target.value)} className="w-full p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm">
@@ -535,7 +522,6 @@ export default function GeneratorPage() {
             </div>
 
             <div className="flex flex-col pt-4 border-t border-slate-100">
-              {/* Poin 2: Topik dibagi jadi dua (Rekomendasi & Manual) */}
               <label className="block text-[13px] font-bold text-slate-700 mb-3">Topik / Capaian Pembelajaran Utama</label>
               
               <select value={topikPilihan} onChange={(e) => setTopikPilihan(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-[13px] mb-3 focus:bg-white focus:border-indigo-500 transition-colors">
@@ -606,7 +592,6 @@ export default function GeneratorPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto bg-white p-6 md:p-10">
-              {/* Poin 3: Loading Persentase Animasi */}
               {isLoading && !isStreaming ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 py-20">
                    <div className="w-16 h-16 relative flex items-center justify-center mb-4">
@@ -621,7 +606,19 @@ export default function GeneratorPage() {
               ) : hasil ? (
                 <div className="prose prose-sm md:prose-base prose-indigo max-w-none text-slate-700 pb-10">
                   <div ref={pdfRef} className="pdf-container relative">
-                    <style>{`.pdf-container { font-family: Arial, sans-serif !important; font-size: 11pt !important; line-height: 1.6 !important; color: #1e293b; } .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; border-radius: 8px; overflow: hidden; } .markdown-body th, .markdown-body td { border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; vertical-align: top; } .markdown-body th { background-color: #f8fafc; font-weight: 800; text-align: center; color: #0f172a; } .markdown-body tr { page-break-inside: avoid; } .markdown-body h1 { font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 2rem; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 1rem; } .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: 800; color: #1e293b; } .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }`}</style>
+                    <style>{`
+                      .pdf-container { font-family: Arial, sans-serif !important; font-size: 11pt !important; line-height: 1.6 !important; color: #1e293b; } 
+                      .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; border-radius: 8px; overflow: hidden; } 
+                      .markdown-body th, .markdown-body td { border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; vertical-align: top; } 
+                      .markdown-body th { background-color: #f8fafc; font-weight: 800; text-align: center; color: #0f172a; } 
+                      .markdown-body tr { page-break-inside: avoid; } 
+                      .markdown-body h1 { font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 2rem; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 1rem; } 
+                      .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: 800; color: #1e293b; } 
+                      /* CSS perbaikan list khusus soal PG agar turun ke bawah */
+                      .markdown-body ul, .markdown-body ol { padding-left: 20px; margin-bottom: 1rem; }
+                      .markdown-body li { margin-bottom: 4px; }
+                      .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }
+                    `}</style>
                     
                     {namaSekolah && (
                       <div style={{ textAlign: 'center', borderBottom: '2px solid black', paddingBottom: '12px', marginBottom: '24px', pageBreakAfter: 'avoid' }}>

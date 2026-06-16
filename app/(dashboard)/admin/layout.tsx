@@ -1,6 +1,5 @@
 "use client";
 
-import AdminHeader from "@/components/AdminHeader";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -39,19 +38,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // KITA HAPUS PEMANGGILAN <Sidebar /> DI SINI
-  // Karena komponen Sidebar sudah disediakan oleh parent layout (dashboard/layout.tsx)
+  // Layout murni tanpa AdminHeader terpisah, karena Header sudah menyatu di dalam page.tsx
   return (
-    <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0 bg-slate-50/50 min-h-screen">
-      
-      {/* HEADER ADMIN BARU */}
-      <AdminHeader />
-
-      {/* AREA KONTEN UTAMA */}
+    <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0 bg-[#F4F5F7] min-h-screen">
       <main className="flex-1 overflow-y-auto">
         {children}
       </main>
-
     </div>
   );
 }

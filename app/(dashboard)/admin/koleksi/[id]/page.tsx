@@ -12,7 +12,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 
-export default function DetailKoleksiPage() {
+export default function AdminDetailKoleksiPage() {
   const { id } = useParams();
   const router = useRouter();
   
@@ -32,7 +32,7 @@ export default function DetailKoleksiPage() {
           setData(docSnap.data());
         } else {
           alert("Dokumen tidak ditemukan!");
-          router.push("/guru/koleksi");
+          router.push("/admin/koleksi"); // Kembali ke koleksi admin
         }
       } catch (error) {
         console.error("Gagal mengambil detail:", error);
@@ -51,18 +51,18 @@ export default function DetailKoleksiPage() {
   };
 
   const handleDelete = async () => {
-    if (confirm("Hapus dokumen ini dari arsip secara permanen?")) {
+    if (confirm("Hapus dokumen ini dari arsip server secara permanen?")) {
       await deleteDoc(doc(db, "dokumen", id as string));
-      router.push("/guru/koleksi");
+      router.push("/admin/koleksi");
     }
   };
 
-  // 🔥 FUNGSI UNDUH WORD (DISINKRONKAN DENGAN HALAMAN GENERATOR)
+  // 🔥 FUNGSI UNDUH WORD
   const handleDownloadWord = () => {
     if (!pdfRef.current) return;
     
-    // Hilangkan tag HMTL yang berantakan, ekstrak isi spesifik
     let printHtml = pdfRef.current.innerHTML;
+    printHtml = printHtml.replace(/class="markdown-body"/g, '');
     
     const header = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -91,12 +91,12 @@ export default function DetailKoleksiPage() {
     const fileDownload = document.createElement("a"); 
     document.body.appendChild(fileDownload); 
     fileDownload.href = source; 
-    fileDownload.download = `${data?.tipe}_${data?.mapel}.doc`.replace(/[^a-zA-Z0-9.\-_]/g, "_"); 
+    fileDownload.download = `ADMIN_${data?.tipe}_${data?.mapel}.doc`.replace(/[^a-zA-Z0-9.\-_]/g, "_"); 
     fileDownload.click(); 
     document.body.removeChild(fileDownload);
   };
 
-  // 🔥 FUNGSI CETAK PDF (DISINKRONKAN DENGAN HALAMAN GENERATOR)
+  // 🔥 FUNGSI CETAK PDF
   const handlePrintPDF = () => {
     const printContent = pdfRef.current?.innerHTML;
     if (!printContent) return;
@@ -139,7 +139,7 @@ export default function DetailKoleksiPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] text-slate-400">
         <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-        <p className="font-medium animate-pulse">Membuka Dokumen...</p>
+        <p className="font-medium animate-pulse">Mengakses Basis Data Server...</p>
       </div>
     );
   }
@@ -149,10 +149,10 @@ export default function DetailKoleksiPage() {
       
       {/* Tombol Kembali & Aksi Cepat */}
       <div className="flex items-center justify-between">
-        <Link href="/guru/koleksi">
+        <Link href="/admin/koleksi">
           <button className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold text-sm transition-colors group">
             <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            Kembali ke Koleksi
+            Kembali ke Manajemen Koleksi
           </button>
         </Link>
         
@@ -160,7 +160,7 @@ export default function DetailKoleksiPage() {
           <button 
             onClick={handleDelete}
             className="p-2.5 text-slate-400 hover:text-rose-600 bg-white border border-slate-200 rounded-xl transition-all active:scale-95 shadow-sm"
-            title="Hapus Permanen"
+            title="Hapus Permanen dari Database"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
           </button>
@@ -193,7 +193,7 @@ export default function DetailKoleksiPage() {
             </div>
           </div>
         </div>
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-amber-50 rounded-full blur-3xl pointer-events-none"></div>
       </motion.div>
 
       {/* KONTEN UTAMA */}
@@ -202,8 +202,8 @@ export default function DetailKoleksiPage() {
         {/* Toolbar Konten */}
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md">
             <h2 className="font-black text-slate-800 text-sm md:text-base flex items-center gap-2">
-                <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Arsip Dokumen
+                <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Arsip Dokumen Sistem
             </h2>
             
             <div className="flex flex-wrap items-center gap-2">
@@ -222,7 +222,7 @@ export default function DetailKoleksiPage() {
             </div>
         </div>
 
-        {/* AREA RENDER DOKUMEN KHUSUS (DISINKRONKAN DENGAN HALAMAN GENERATOR) */}
+        {/* AREA RENDER DOKUMEN KHUSUS */}
         <div className="p-6 md:p-12">
             <div className="prose prose-sm md:prose-base prose-indigo max-w-none text-slate-700 leading-relaxed">
               
@@ -235,7 +235,6 @@ export default function DetailKoleksiPage() {
                   .markdown-body tr { page-break-inside: avoid; } 
                   .markdown-body h1 { font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 2rem; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 1rem; } 
                   .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: 800; color: #1e293b; } 
-                  /* CSS perbaikan list khusus soal PG */
                   .markdown-body ul, .markdown-body ol { padding-left: 20px; margin-bottom: 1rem; }
                   .markdown-body li { margin-bottom: 4px; }
                   .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }
@@ -305,7 +304,7 @@ export default function DetailKoleksiPage() {
 
       <div className="text-center py-6">
           <p className="text-[10px] md:text-xs text-slate-400 font-medium">
-            Dokumen ini di-generate menggunakan teknologi AI Syntax pada standar Kurikulum Merdeka.
+            Arsip Server Pusat - Syntax App
           </p>
       </div>
 

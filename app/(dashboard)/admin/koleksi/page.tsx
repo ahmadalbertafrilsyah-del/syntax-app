@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, doc, getDoc, deleteDoc, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, deleteDoc, query } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -14,7 +14,6 @@ export default function AdminKoleksiManagement() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
-    // Tunggu auth inisialisasi sebentar jika diperlukan (opsional, tapi disarankan menggunakan onAuthStateChanged di real app)
     if (!auth.currentUser) return router.push("/login");
     
     try {
@@ -32,8 +31,8 @@ export default function AdminKoleksiManagement() {
         userMap[u.id] = u.data().nama || "Guru Tidak Dikenal";
       });
 
-      // 3. Ambil SEMUA Dokumen yang pernah di-generate
-      const q = query(collection(db, "dokumen"), orderBy("dibuat_pada", "desc"));
+      // 3. Ambil SEMUA Dokumen yang pernah di-generate (TanPA orderBy Firebase)
+      const q = query(collection(db, "dokumen"));
       const docSnapshots = await getDocs(q);
       
       const allDocs = docSnapshots.docs.map(d => {
@@ -47,9 +46,13 @@ export default function AdminKoleksiManagement() {
           id: d.id,
           ...data,
           tanggalFormatted: tanggalFormat,
-          namaGuru: userMap[data.id_user] || "Sistem / Dihapus" 
+          namaGuru: userMap[data.id_user] || "Sistem / Dihapus",
+          rawDate: dateObj // Disimpan untuk sorting lokal
         };
       });
+
+      // 4. SORTING LOKAL (CLIENT-SIDE)
+      allDocs.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
 
       setDokumenList(allDocs);
     } catch (error) {
@@ -60,7 +63,6 @@ export default function AdminKoleksiManagement() {
   };
 
   useEffect(() => {
-    // Kita gunakan setTimeout kecil agar auth sempat terbaca sebelum fetching
     const timer = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(timer);
   }, [router]);
@@ -183,8 +185,9 @@ export default function AdminKoleksiManagement() {
                     {/* Kolom 4: Aksi */}
                     <td className="p-4 pr-8 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {/* 🔥 PERBAIKAN RUTE: Dari /guru/ menjadi /admin/ */}
                         <Link 
-                          href={`/guru/koleksi/${docItem.id}`} 
+                          href={`/admin/koleksi/${docItem.id}`} 
                           className="px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
                         >
                           Lihat Detail
@@ -244,8 +247,9 @@ export default function AdminKoleksiManagement() {
 
                 {/* Tombol Aksi */}
                 <div className="flex gap-2 pt-1">
+                  {/* 🔥 PERBAIKAN RUTE: Dari /guru/ menjadi /admin/ */}
                   <Link 
-                    href={`/guru/koleksi/${docItem.id}`} 
+                    href={`/admin/koleksi/${docItem.id}`} 
                     className="flex-1 py-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-xs font-bold transition-colors text-center"
                   >
                     Buka Dokumen

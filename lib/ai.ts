@@ -22,7 +22,6 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
     console.log(`\n--- MEMULAI PROSES AI (MODE STREAMING) ---`);
     console.log(`Request: ${tipe} | ${mapel} | ${fase} | ${topik} | ${sumber}`);
 
-    // Langsung tembak ke .env tanpa melewati MySQL
     const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -93,11 +92,17 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
 
       ATURAN BAKU & FORMAT PEMBUATAN (WAJIB DIPATUHI 100%):
       ${instruksiSistem}
-
+      
       ATURAN FORMATTING GLOBAL (SANGAT PENTING):
       - Tuliskan dalam format Markdown yang sangat rapi dan siap cetak.
       - DILARANG KERAS MENGGUNAKAN LATEX (seperti simbol $ atau $$).
-      - KHUSUS SOAL PILIHAN GANDA: Setiap opsi jawaban (A, B, C, D) WAJIB ditulis pada baris baru secara vertikal.
+      - KHUSUS SOAL PILIHAN GANDA: Anda WAJIB memisahkan setiap opsi jawaban menggunakan format "List Markdown". Jangan gabungkan dalam satu baris.
+        Contoh Wajib:
+        1. Pertanyaan soal?
+           - A. Opsi Pertama
+           - B. Opsi Kedua
+           - C. Opsi Ketiga
+           - D. Opsi Keempat
       - WAJIB GUNAKAN FORMAT TABEL MARKDOWN untuk bagian-bagian terstruktur.
       - Jika diminta menyertakan Dalil/Teks kutipan, tuliskan teksnya. JANGAN TINGGALKAN KOSONG ("...").
       - EFISIENSI TOKEN: Dilarang berbasa-basi. Tulis langsung pada intinya agar dokumen tuntas.
@@ -288,15 +293,12 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
 // ============================================================================
 export async function* chatAssistantStream(history: {role: "user" | "model", parts: {text: string}[]}[], newMessage: string) {
   try {
-    // Mengambil API Key dari .env (Sesuaikan jika Anda menggunakan getActiveApiKey())
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("API Key Gemini tidak ditemukan.");
-    }
-
+    const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // Menggunakan gemini-1.5-pro sesuai preferensi sebelumnya untuk chat
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-pro",
+      model: "gemini-1.5-pro",
       generationConfig: { maxOutputTokens: 8192, temperature: 0.7 },
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -306,10 +308,7 @@ export async function* chatAssistantStream(history: {role: "user" | "model", par
       ],
     });
 
-    // Memulai sesi chat dengan riwayat sebelumnya
     const chat = model.startChat({ history: history });
-    
-    // Mengirim pesan baru (yang sudah digabung dengan scope Admin dari ChatWidget)
     const result = await chat.sendMessageStream(newMessage);
     
     for await (const chunk of result.stream) { 
@@ -317,6 +316,6 @@ export async function* chatAssistantStream(history: {role: "user" | "model", par
     }
   } catch (error: any) {
     console.error("🛑 ERROR CHAT AI:", error);
-    throw new Error("Maaf, Asisten Syntax sedang sibuk. Coba beberapa saat lagi.");
+    throw new Error("Maaf, Asisten Syntax sedang sibuk atau ada masalah jaringan. Coba beberapa saat lagi.");
   }
 }

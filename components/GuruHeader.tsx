@@ -6,7 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import ChatWidget from "@/components/ChatWidget"; // MEMANGGIL CHATBOT DI SINI
+import ChatWidget from "@/components/ChatWidget";
 
 export default function GuruHeader() {
   const { user } = useAuth();
@@ -97,15 +97,13 @@ export default function GuruHeader() {
 
       <div className="flex items-center gap-2 bg-white p-1.5 pr-2 md:pr-4 rounded-full shadow-sm border border-slate-100/80 shrink-0 relative">
         
-        {/* TAMPILAN WIDGET CHATBOT PINDAH KESINI */}
-        <div className="relative z-50">
-          <ChatWidget />
-        </div>
+        {/* WIDGET CHATBOT */}
+        <ChatWidget />
 
         <div className="h-6 w-px bg-slate-200 mx-0.5"></div>
 
-        {/* WADAH NOTIFIKASI (Dengan perbaikan responsif layar kecil) */}
-        <div className="relative ml-1">
+        {/* WADAH NOTIFIKASI */}
+        <div className="relative z-50 flex items-center justify-center">
           <button 
             onClick={() => setIsNotifOpen(!isNotifOpen)} 
             className={`p-2 rounded-full transition-colors relative z-50 ${isNotifOpen ? 'text-[#FF4B2B] bg-orange-50' : 'text-slate-400 hover:text-[#FF4B2B] hover:bg-orange-50'}`}
@@ -122,18 +120,18 @@ export default function GuruHeader() {
           </button>
 
           {isNotifOpen && (
-            <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)}></div>
+            <div className="fixed inset-0 z-[90] bg-slate-900/20 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none" onClick={() => setIsNotifOpen(false)}></div>
           )}
 
           <AnimatePresence>
             {isNotifOpen && (
               <motion.div 
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                // PERBAIKAN RESPONSIVE: Menggunakan w-[calc(100vw-32px)] untuk HP dan w-96 untuk Desktop
-                className="absolute right-0 mt-3 w-[calc(100vw-32px)] md:w-96 bg-white rounded-[24px] shadow-2xl border border-slate-100 overflow-hidden z-50 origin-top-right transform translate-x-[4px] md:translate-x-0"
+                // 🔥 PERBAIKAN DESKTOP: Menambahkan md:mt-2 agar kotak tidak menabrak batas atas
+                className="fixed top-[72px] left-4 right-4 md:absolute md:top-full md:left-auto md:right-0 md:mt-2 md:w-[380px] bg-white rounded-[24px] shadow-2xl border border-slate-100 overflow-hidden z-[100] origin-top md:origin-top-right"
               >
                 <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
                   <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -173,7 +171,6 @@ export default function GuruHeader() {
 
         <div className="h-6 w-px bg-slate-200 mx-0.5"></div>
 
-        {/* Profil User */}
         <div className="flex items-center gap-2 pl-1 pr-2">
           <div className="w-8 h-8 md:w-9 md:h-9 bg-gradient-to-tr from-[#FF6B4A] to-[#FF4B2B] rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden shrink-0 border-2 border-white">
             {userData?.fotoProfile ? (
@@ -192,7 +189,6 @@ export default function GuruHeader() {
 
         <div className="h-6 w-px bg-slate-200 mx-0.5 hidden sm:block"></div>
 
-        {/* Tombol Logout */}
         <button onClick={handleLogout} className="p-1.5 md:p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-full transition-colors" title="Keluar">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
         </button>
