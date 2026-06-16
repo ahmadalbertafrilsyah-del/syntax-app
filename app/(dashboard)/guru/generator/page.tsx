@@ -2,11 +2,11 @@
 
 export const maxDuration = 60;
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { generatePerangkatAjar } from "@/lib/ai";
 import { useAuth } from "@/lib/AuthContext";
-import { saveDokumen, updateDokumenKonten } from "@/lib/actions"; // Jembatan MySQL/Prisma
+import { saveDokumen, updateDokumenKonten } from "@/lib/actions";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -15,12 +15,17 @@ import rehypeRaw from "rehype-raw";
 export default function GeneratorPage() {
   const { user } = useAuth(); 
 
+  // Poin 1 & 8: Referensi Dasar (KMA 1503 2025)
   const [sumber, setSumber] = useState("Kemendikbud Ristek"); 
   const [tipe, setTipe] = useState("Modul Ajar (PPM)");
   const [fase, setFase] = useState("");
   const [mapel, setMapel] = useState("");
+  
+  // Poin 2: Topik Ganda (Manual & Dropdown Rekomendasi)
   const [topik, setTopik] = useState("");
+  const [topikPilihan, setTopikPilihan] = useState("");
 
+  // Poin 4: Identitas
   const [namaSekolah, setNamaSekolah] = useState("");
   const [kotaSekolah, setKotaSekolah] = useState(""); 
   const [namaKepsek, setNamaKepsek] = useState("");
@@ -30,7 +35,6 @@ export default function GeneratorPage() {
   
   const [bahanAjarUrl, setBahanAjarUrl] = useState("");
 
-  // === STATE DINAMIS ===
   const [metode, setMetode] = useState("");
   const [customMetode, setCustomMetode] = useState("");
   const [alokasiWaktu, setAlokasiWaktu] = useState("");
@@ -42,20 +46,27 @@ export default function GeneratorPage() {
   const [jenisTugas, setJenisTugas] = useState("");
   const [aspekPenilaian, setAspekPenilaian] = useState("");
 
+  // Poin 5: Media Ajar
+  const [mediaAjar, setMediaAjar] = useState("");
+  const [customMediaAjar, setCustomMediaAjar] = useState("");
+
+  // Poin 6: Asesmen Tertulis
   const [jenisUjian, setJenisUjian] = useState("Asesmen Formatif");
   const [kesulitanSoal, setKesulitanSoal] = useState("Campuran HOTS dan LOTS");
   const [opsiPG, setOpsiPG] = useState("A - D (4 Opsi)");
-  const [jmlPG, setJmlPG] = useState("10");
+  const [jmlPG, setJmlPG] = useState("5"); // Default disesuaikan
   const [jmlPGK, setJmlPGK] = useState("0");
   const [jmlMenjodohkan, setJmlMenjodohkan] = useState("0");
   const [jmlBenarSalah, setJmlBenarSalah] = useState("0");
   const [jmlIsian, setJmlIsian] = useState("0");
-  const [jmlUraian, setJmlUraian] = useState("5");
+  const [jmlUraian, setJmlUraian] = useState("5"); // Default disesuaikan
   
   const [dokumenTerakhir, setDokumenTerakhir] = useState(""); 
   const [gunakanKonteks, setGunakanKonteks] = useState(true); 
   
   const [isLoading, setIsLoading] = useState(false);
+  // Poin 3: Loading Persentase
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [hasil, setHasil] = useState("");
   const [isStreaming, setIsStreaming] = useState(false); 
   const [docId, setDocId] = useState(""); 
@@ -66,6 +77,7 @@ export default function GeneratorPage() {
 
   const pdfRef = useRef<HTMLDivElement>(null);
 
+  // DATA SELECTOR
   const p5Kemendikbud = ["Semua Dimensi P5", "Beriman, Bertakwa & Berakhlak Mulia", "Berkebinekaan Global", "Bergotong Royong", "Mandiri", "Bernalar Kritis", "Kreatif"];
   const p5Kemenag = ["Semua Nilai P5 & PPRA", "Berkeadaban (Ta'addub)", "Keteladanan (Qudwah)", "Kewarganegaraan (Muwatana)", "Mengambil jalan tengah (Tawassut)", "Berimbang (Tawazun)", "Lurus dan tegas (I'tidal)", "Kesetaraan (Musawa)", "Musyawarah (Syura)", "Toleransi (Tasamuh)", "Dinamis dan inovatif (Tathawwur)"];
   
@@ -75,21 +87,62 @@ export default function GeneratorPage() {
   const aspekKemendikbud = ["Komprehensif (Sikap, Pengetahuan, Keterampilan)", "Sikap (Observasi/Jurnal)", "Pengetahuan (Tes Tulis/Lisan)", "Keterampilan (Proyek/Produk/Praktik)"];
   const aspekKemenag = ["Komprehensif (Spiritual, Sosial, Kognitif, Psikomotorik)", "Sikap Spiritual (KI-1) & Sosial (KI-2)", "Pengetahuan (KI-3)", "Keterampilan (KI-4)"];
 
+  const mediaModern = ["Canva Presentation", "Quizziz / Kahoot", "Video YouTube / TikTok Edukasi", "Wordwall / Educandy", "Padlet / Miro (Kolaborasi)", "Alat Peraga Fisik / Lingkungan Sekitar", "Lainnya (Custom)"];
+
+  // Simulasi Persentase Loading
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLoading && !isStreaming) {
+      setLoadingProgress(0);
+      interval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 90) { clearInterval(interval); return 90; }
+          return prev + Math.floor(Math.random() * 15) + 5;
+        });
+      }, 800);
+    } else if (isStreaming) {
+      setLoadingProgress(100);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading, isStreaming]);
+
+  // Handle otomatis tahun pelajaran
+  useEffect(() => {
+    const d = new Date();
+    const curYear = d.getFullYear();
+    const curMonth = d.getMonth() + 1;
+    if (!tahunPelajaran) {
+       setTahunPelajaran(curMonth >= 7 ? `${curYear}/${curYear+1}` : `${curYear-1}/${curYear}`);
+    }
+  }, []);
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { alert("Sesi Anda telah berakhir."); return; }
+    
+    // Poin 2: Gabungkan topik jika keduanya diisi
+    const finalTopik = topikPilihan && topik ? `${topikPilihan} - ${topik}` : topikPilihan || topik;
+    if (!finalTopik) { alert("Pilih atau ketik topik pembelajaran!"); return; }
 
-    setIsLoading(true); setIsStreaming(true); setHasil(""); setDocId("");
+    setIsLoading(true); setIsStreaming(false); setHasil(""); setDocId("");
     let teksLengkap = ""; 
 
     try {
-      let topikKirim = `Topik: ${topik}\n`;
+      // Poin 4 & 8: Inject Instruksi Ketat ke AI
+      let topikKirim = `[INSTRUKSI SISTEM]: Patuhi format standar nasional secara ketat. Jika ada kolom Institusi/Sekolah, gunakan "${namaSekolah || '[Nama Institusi]'}". Jika ada Tahun Penyusunan, gunakan "${new Date().getFullYear()}".\n\nTopik Utama: ${finalTopik}\n`;
 
       if (tipe === "Modul Ajar (PPM)" || tipe === "RPP") {
         if (bahanAjarUrl !== "") topikKirim += `- Bahan Ajar Eksternal: ${bahanAjarUrl}\n`;
-        if (metode !== "") topikKirim += `- Strategi: ${metode === "Lainnya (Custom)" ? customMetode : metode}\n`;
-        if (alokasiWaktu !== "") topikKirim += `- Waktu: ${alokasiWaktu}\n`;
-        if (profilPelajar !== "") topikKirim += `- Fokus Karakter: ${profilPelajar}\n`;
+        if (metode !== "") topikKirim += `- Strategi Pembelajaran: ${metode === "Lainnya (Custom)" ? customMetode : metode}\n`;
+        if (alokasiWaktu !== "") topikKirim += `- Alokasi Waktu: ${alokasiWaktu}\n`;
+        if (profilPelajar !== "") topikKirim += `- Fokus P5/PPRA: Wajib jabarkan penerapan nilai "${profilPelajar}" dalam skenario pembelajaran.\n`;
+        
+        // Poin 5: Inject Media Ajar
+        const finalMedia = mediaAjar === "Lainnya (Custom)" ? customMediaAjar : mediaAjar;
+        if (finalMedia) topikKirim += `- Media Ajar Spesifik: Gunakan dan integrasikan alat "${finalMedia}" di bagian kegiatan inti.\n`;
+
+        // Poin 6: Tambahkan Instruksi Asesmen Tertulis jika RPP/Modul
+        topikKirim += `- Asesmen Formatif: Buatlah soal PG 5 butir dan Esai 5 butir. Tambahkan kalimat "Untuk membuat paket instrumen asesmen yang lebih komprehensif, silakan gunakan menu [Bank Soal] pada Syntax HDE." di bagian bawah rubrik asesmen.\n`;
       } 
       else if (tipe === "Analisis TP" || tipe === "Alur TP (ATP)") {
         if (elemenCP !== "") topikKirim += `- Elemen: ${elemenCP}\n`;
@@ -113,8 +166,9 @@ export default function GeneratorPage() {
         topikKirim += `\n[Konteks Dokumen Sebelumnya Agar Selaras]:\n${dokumenTerakhir.substring(0, 2500)}...`;
       }
 
+      // Mulai Generate
       const streamResult = await generatePerangkatAjar(tipe, fase, mapel, topikKirim, sumber);
-      setIsLoading(false); 
+      setIsLoading(false); setIsStreaming(true);
 
       for await (const chunk of streamResult) {
         teksLengkap += chunk;
@@ -125,7 +179,7 @@ export default function GeneratorPage() {
 
       // MENGGUNAKAN SERVER ACTION (PRISMA/MYSQL) UNTUK MENYIMPAN DATA
       const payload = {
-        id_user: user.uid, sumber, tipe, fase, mapel, topik, konten_ai: teksLengkap, 
+        id_user: user.uid, sumber, tipe, fase, mapel, topik: finalTopik, konten_ai: teksLengkap, 
         namaSekolah, kotaSekolah, namaKepsek, nipKepsek, namaGuru, nipGuru,
       };
       
@@ -151,10 +205,7 @@ export default function GeneratorPage() {
       const hasilAkhir = hasil + teksTambahan;
       setDokumenTerakhir(hasilAkhir);
       
-      // MENGGUNAKAN SERVER ACTION (PRISMA/MYSQL) UNTUK UPDATE DATA
-      if (docId) {
-        await updateDokumenKonten(docId, hasilAkhir);
-      }
+      if (docId) { await updateDokumenKonten(docId, hasilAkhir); }
 
     } catch (e) {
       alert("Gagal menyambung teks. Pastikan koneksi stabil.");
@@ -165,41 +216,86 @@ export default function GeneratorPage() {
 
   const handleGenerateMedia = async () => {
     const { generateMediaAIStream } = await import("@/lib/ai");
-    setMediaLoading(true);
-    setMediaResult("");
-    let teks = "";
+    setMediaLoading(true); setMediaResult(""); let teks = "";
     try {
       const stream = await generateMediaAIStream(topik, mapel, fase);
-      for await (const chunk of stream) {
-        teks += chunk;
-        setMediaResult(teks);
-      }
-    } catch (e) {
-      alert("Gagal memuat media AI.");
-    } finally {
-      setMediaLoading(false);
-    }
+      for await (const chunk of stream) { teks += chunk; setMediaResult(teks); }
+    } catch (e) { alert("Gagal memuat media AI."); } finally { setMediaLoading(false); }
   };
 
   const handleCopyText = () => { navigator.clipboard.writeText(hasil); alert("Teks disalin!"); };
   const handleShareFlipbook = () => { if (docId) { window.open(`${window.location.origin}/share/flipbook/${docId}`, '_blank'); } };
 
+  // Poin 7: Ekspor Word dan PDF Diperbaiki
   const handleDownloadWord = () => {
     if (!pdfRef.current) return;
-    let cleanHTML = pdfRef.current.innerHTML.replace(/class="markdown-body"/g, '');
-    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Dokumen</title><style>@page WordSection1 { size: 21cm 29.7cm; margin: 2.54cm; } div.WordSection1 { page: WordSection1; } body, p, li, td, th, h1, h2, h3, h4, div { font-family: Arial, sans-serif !important; font-size: 12pt !important; color: black !important; font-weight: normal; } h1, h2, h3, h4 { font-weight: bold !important; margin-top: 18pt; margin-bottom: 6pt; } p, ul, ol { margin-bottom: 12pt; line-height: 1.5; } table { width: 100%; border-collapse: collapse; margin-top: 15pt; margin-bottom: 15pt; } table, td, th { border: 1pt solid black !important; } td, th { padding: 5pt 8pt; vertical-align: top; text-align: left; } th { background-color: #f1f5f9; font-weight: bold !important; text-align: center; } .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; }</style></head><body><div class="WordSection1">${cleanHTML}</div></body></html>`;
+    
+    // Hilangkan tag HMTL yang berantakan, ekstrak isi spesifik
+    let printHtml = pdfRef.current.innerHTML;
+    
+    const header = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Dokumen</title>
+        <style>
+          @page WordSection1 { size: 21cm 29.7cm; margin: 2.54cm; }
+          div.WordSection1 { page: WordSection1; }
+          body, p, li, td, th, h1, h2, h3, h4, div { font-family: Arial, sans-serif !important; font-size: 11pt !important; color: black !important; font-weight: normal; }
+          h1 { font-size: 16pt !important; font-weight: bold !important; margin-bottom: 12pt; text-align: center; }
+          h2 { font-size: 14pt !important; font-weight: bold !important; margin-top: 18pt; margin-bottom: 6pt; }
+          h3 { font-size: 12pt !important; font-weight: bold !important; margin-top: 12pt; }
+          p, ul, ol { margin-bottom: 10pt; line-height: 1.5; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15pt; margin-bottom: 15pt; border: 1pt solid black !important; }
+          td, th { border: 1pt solid black !important; padding: 5pt 8pt; vertical-align: top; text-align: left; }
+          th { background-color: #f1f5f9; font-weight: bold !important; }
+          .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; }
+        </style>
+      </head>
+      <body><div class="WordSection1">${printHtml}</div></body></html>
+    `;
     const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(header);
-    const fileDownload = document.createElement("a"); document.body.appendChild(fileDownload); fileDownload.href = source; fileDownload.download = `${tipe}_${mapel}.doc`; fileDownload.click(); document.body.removeChild(fileDownload);
+    const fileDownload = document.createElement("a"); 
+    document.body.appendChild(fileDownload); 
+    fileDownload.href = source; 
+    fileDownload.download = `${tipe}_${mapel}.doc`; 
+    fileDownload.click(); 
+    document.body.removeChild(fileDownload);
   };
 
   const handlePrintPDF = () => {
     const printContent = pdfRef.current?.innerHTML;
     if (!printContent) return;
-    const iframe = document.createElement("iframe"); iframe.style.display = "none"; document.body.appendChild(iframe);
+    
+    const iframe = document.createElement("iframe"); 
+    iframe.style.display = "none"; 
+    document.body.appendChild(iframe);
     iframe.contentWindow?.document.open();
-    iframe.contentWindow?.document.write(`<html><head><title>Cetak</title><style>@page { size: A4 portrait; margin: 2.54cm; } body { font-family: Arial, sans-serif !important; font-size: 12pt !important; line-height: 1.5 !important; color: #000; } table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; } th, td { border: 1pt solid #000; padding: 8px 10px; text-align: left; vertical-align: top; } th { background-color: #f1f5f9; font-weight: bold; text-align: center; } tr { page-break-inside: avoid; } h1, h2, h3, h4 { page-break-after: avoid; margin-top: 1.5rem; margin-bottom: 0.5rem; } .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }</style></head><body>${printContent}</body></html>`);
+    iframe.contentWindow?.document.write(`
+      <html>
+      <head>
+        <title>Cetak PDF</title>
+        <style>
+          @page { size: A4 portrait; margin: 2.54cm; }
+          body { font-family: Arial, sans-serif !important; font-size: 11pt !important; line-height: 1.5 !important; color: #000; }
+          h1 { text-align: center; font-size: 16pt; margin-bottom: 2rem; }
+          table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; border: 1pt solid #000; }
+          th, td { border: 1pt solid #000; padding: 8px 10px; text-align: left; vertical-align: top; }
+          th { background-color: #f1f5f9; font-weight: bold; }
+          tr { page-break-inside: avoid; }
+          h2, h3, h4 { page-break-after: avoid; margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: bold; }
+          ul, ol { margin-left: 20px; }
+          .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }
+        </style>
+      </head>
+      <body>${printContent}</body></html>
+    `);
     iframe.contentWindow?.document.close();
-    setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(() => document.body.removeChild(iframe), 1000); }, 500);
+    setTimeout(() => { 
+      iframe.contentWindow?.focus(); 
+      iframe.contentWindow?.print(); 
+      setTimeout(() => document.body.removeChild(iframe), 1000); 
+    }, 500);
   };
 
   const isEvaluasi = tipe === "Bank Soal" || tipe === "Rubrik Penilaian";
@@ -247,10 +343,10 @@ export default function GeneratorPage() {
             {/* IDENTITAS */}
             <div className="bg-[#F4F5F7]/50 p-5 rounded-[24px] border border-slate-100 mb-2">
               <label className="block text-[13px] font-bold text-slate-700 mb-4 flex items-center gap-2">
-                 <span className="text-indigo-500 text-lg">🏫</span> Identitas Resmi (Opsional)
+                 <span className="text-indigo-500 text-lg">🏫</span> Identitas Resmi (Diperlukan Untuk Export Dokumen)
               </label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="text" value={namaSekolah} onChange={(e) => setNamaSekolah(e.target.value)} placeholder="Nama Sekolah" className="p-3.5 bg-white border border-slate-200 rounded-xl text-[13px] outline-none shadow-sm" />
+                <input type="text" value={namaSekolah} onChange={(e) => setNamaSekolah(e.target.value)} placeholder="Nama Madrasah / Sekolah" className="p-3.5 bg-white border border-slate-200 rounded-xl text-[13px] outline-none shadow-sm" />
                 <input type="text" value={kotaSekolah} onChange={(e) => setKotaSekolah(e.target.value)} placeholder="Kota/Kabupaten" className="p-3.5 bg-white border border-slate-200 rounded-xl text-[13px] outline-none shadow-sm" />
                 <input type="text" value={namaGuru} onChange={(e) => setNamaGuru(e.target.value)} placeholder="Nama Anda (Guru Mapel)" className="p-3.5 bg-white border border-slate-200 rounded-xl text-[13px] outline-none shadow-sm" />
                 <input type="text" value={nipGuru} onChange={(e) => setNipGuru(e.target.value)} placeholder="NIP Anda" className="p-3.5 bg-white border border-slate-200 rounded-xl text-[13px] outline-none shadow-sm" />
@@ -261,10 +357,11 @@ export default function GeneratorPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
+                {/* Poin 1: Sumber Diubah sesuai instruksi */}
                 <label className="block text-[13px] font-bold mb-2 text-slate-700">Sumber Referensi Dasar</label>
                 <select value={sumber} onChange={(e) => setSumber(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:border-indigo-500">
+                  <option value="Kementerian Agama">Kementerian Agama (KMA 1503 2025)</option>
                   <option value="Kemendikbud Ristek">Kemendikbud Ristek (Nasional)</option>
-                  <option value="Kementerian Agama">Kementerian Agama (KMA 183)</option>
                 </select>
               </div>
               <div>
@@ -312,10 +409,17 @@ export default function GeneratorPage() {
                         </select>
                         {metode === "Lainnya (Custom)" && <input type="text" value={customMetode} onChange={(e) => setCustomMetode(e.target.value)} placeholder="Ketik model..." className="w-full mt-3 p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm" />}
                       </div>
+                      
+                      {/* Poin 5: Media Ajar Baru */}
                       <div>
-                        <label className="block text-[12px] font-bold text-emerald-800 mb-2">Alokasi Waktu</label>
-                        <input type="text" value={alokasiWaktu} onChange={(e) => setAlokasiWaktu(e.target.value)} placeholder="Misal: 2 JP x 45 Menit" className="w-full p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm" />
+                        <label className="block text-[12px] font-bold text-emerald-800 mb-2">Rekomendasi Media Ajar</label>
+                        <select value={mediaAjar} onChange={(e) => setMediaAjar(e.target.value)} className="w-full p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm">
+                          <option value="">Pilih Otomatis AI Sesuai Topik</option>
+                          {mediaModern.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        {mediaAjar === "Lainnya (Custom)" && <input type="text" value={customMediaAjar} onChange={(e) => setCustomMediaAjar(e.target.value)} placeholder="Misal: Flashcard Interaktif..." className="w-full mt-3 p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm" />}
                       </div>
+
                       <div>
                         <label className="block text-[12px] font-bold text-emerald-800 mb-2">Fokus Karakter (P5 / PPRA)</label>
                         <select value={profilPelajar} onChange={(e) => setProfilPelajar(e.target.value)} className="w-full p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm">
@@ -323,8 +427,13 @@ export default function GeneratorPage() {
                           {(sumber === "Kementerian Agama" ? p5Kemenag : p5Kemendikbud).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
                       </div>
-                      <div className="md:col-span-3 pt-2">
-                         <label className="block text-[12px] font-bold text-emerald-800 mb-2">Lampirkan URL Video/Bahan Ajar Tambahan</label>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[12px] font-bold text-emerald-800 mb-2">Alokasi Waktu Pembelajaran</label>
+                        <input type="text" value={alokasiWaktu} onChange={(e) => setAlokasiWaktu(e.target.value)} placeholder="Misal: 2 JP x 45 Menit" className="w-full p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm" />
+                      </div>
+                      <div className="md:col-span-1">
+                         <label className="block text-[12px] font-bold text-emerald-800 mb-2">Lampirkan URL YouTube (Opsional)</label>
                          <input type="url" value={bahanAjarUrl} onChange={(e) => setBahanAjarUrl(e.target.value)} placeholder="https://youtube.com/..." className="w-full p-3 bg-white border border-emerald-200 rounded-xl text-[12px] outline-none shadow-sm" />
                       </div>
                     </div>
@@ -426,10 +535,28 @@ export default function GeneratorPage() {
             </div>
 
             <div className="flex flex-col pt-4 border-t border-slate-100">
+              {/* Poin 2: Topik dibagi jadi dua (Rekomendasi & Manual) */}
               <label className="block text-[13px] font-bold text-slate-700 mb-3">Topik / Capaian Pembelajaran Utama</label>
-              <textarea required value={topik} onChange={(e) => setTopik(e.target.value)} placeholder="Ketik ringkasan materi atau copy paste CP di sini..." className="w-full p-5 bg-[#F4F5F7] border border-slate-200 rounded-2xl outline-none text-[13px] min-h-[120px] mb-5 focus:bg-white focus:border-indigo-500 transition-colors" />
+              
+              <select value={topikPilihan} onChange={(e) => setTopikPilihan(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none text-[13px] mb-3 focus:bg-white focus:border-indigo-500 transition-colors">
+                <option value="">-- Pilih Topik Rekomendasi (Atau Biarkan Kosong) --</option>
+                {sumber === "Kemendikbud Ristek" ? (
+                   <>
+                     <option value="Menganalisis keterkaitan antara struktur dan fungsi sel">Biologi - Sel dan Fungsinya</option>
+                     <option value="Memahami proses perumusan Pancasila sebagai dasar negara">PPKn - Perumusan Pancasila</option>
+                     <option value="Menyelesaikan masalah yang berkaitan dengan sistem persamaan linear">Matematika - SPLDV</option>
+                   </>
+                ) : (
+                   <>
+                     <option value="Memahami sifat-sifat wajib, mustahil, dan jaiz bagi Allah SWT">Akidah - Sifat Allah</option>
+                     <option value="Menganalisis sejarah masuknya Islam ke Nusantara">SKI - Islam Nusantara</option>
+                     <option value="Mempraktikkan tata cara shalat jenazah dengan benar">Fikih - Pengurusan Jenazah</option>
+                   </>
+                )}
+              </select>
 
-              {/* FITUR KESELARASAN / SINKRONISASI (DIKEMBALIKAN KE UI) */}
+              <textarea value={topik} onChange={(e) => setTopik(e.target.value)} placeholder="Atau ketik manual ringkasan materi/copy paste CP spesifik di sini..." className="w-full p-5 bg-[#F4F5F7] border border-slate-200 rounded-2xl outline-none text-[13px] min-h-[100px] mb-5 focus:bg-white focus:border-indigo-500 transition-colors" />
+
               {dokumenTerakhir && (
                 <label className="flex items-start gap-3 p-5 mb-6 bg-indigo-50/50 rounded-2xl border border-indigo-100 cursor-pointer hover:bg-indigo-50 transition-colors">
                   <input type="checkbox" checked={gunakanKonteks} onChange={(e) => setGunakanKonteks(e.target.checked)} className="mt-1 w-5 h-5 text-indigo-600 rounded border-indigo-300 focus:ring-indigo-500 cursor-pointer" />
@@ -461,12 +588,9 @@ export default function GeneratorPage() {
               
               {hasil && !isStreaming && (
                 <div className="flex flex-wrap items-center gap-2">
-                  
-                  {/* TOMBOL LANJUTKAN TEKS JIKA TERPOTONG */}
                   <button onClick={handleLanjutkanTeks} className="px-4 py-2.5 bg-amber-50 text-amber-700 text-[12px] font-bold rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-2">
                     ✍️ Terpotong? Lanjutkan
                   </button>
-
                   <button onClick={() => setShowMediaModal(true)} className="px-4 py-2.5 bg-indigo-50 text-indigo-700 text-[12px] font-bold rounded-xl flex items-center gap-2 border border-indigo-200 hover:bg-indigo-100 transition-colors">
                     ✨ Ide Media AI
                   </button>
@@ -482,19 +606,26 @@ export default function GeneratorPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto bg-white p-6 md:p-10">
-              {isLoading ? (
+              {/* Poin 3: Loading Persentase Animasi */}
+              {isLoading && !isStreaming ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 py-20">
-                   <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-                   <p className="font-bold text-slate-600 text-sm">Menyelaraskan dengan database kurikulum...</p>
+                   <div className="w-16 h-16 relative flex items-center justify-center mb-4">
+                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                       <circle className="text-slate-100 stroke-current" strokeWidth="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                       <circle className="text-indigo-600 stroke-current transition-all duration-700 ease-out" strokeWidth="8" strokeLinecap="round" cx="50" cy="50" r="40" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * loadingProgress) / 100}></circle>
+                     </svg>
+                     <span className="absolute text-sm font-black text-indigo-600">{loadingProgress}%</span>
+                   </div>
+                   <p className="font-bold text-slate-600 text-sm">Menyelaraskan kurikulum & memproses data...</p>
                 </div>
               ) : hasil ? (
                 <div className="prose prose-sm md:prose-base prose-indigo max-w-none text-slate-700 pb-10">
                   <div ref={pdfRef} className="pdf-container relative">
-                    <style>{`.pdf-container { font-family: Arial, sans-serif !important; font-size: 12pt !important; line-height: 1.6 !important; color: #1e293b; } .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; border-radius: 8px; overflow: hidden; } .markdown-body th, .markdown-body td { border: 1px solid #cbd5e1; padding: 12px 16px; text-align: left; vertical-align: top; } .markdown-body th { background-color: #f8fafc; font-weight: 800; text-align: center; color: #0f172a; } .markdown-body tr { page-break-inside: avoid; } .markdown-body h1 { font-size: 24px; font-weight: 900; text-align: center; margin-bottom: 2rem; color: #0f172a; border-bottom: 3px solid #0f172a; padding-bottom: 1rem; } .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin-top: 2rem; margin-bottom: 1rem; font-weight: 800; color: #1e293b; } .markdown-body p, .markdown-body ul, .markdown-body ol { margin-bottom: 1rem; } .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }`}</style>
+                    <style>{`.pdf-container { font-family: Arial, sans-serif !important; font-size: 11pt !important; line-height: 1.6 !important; color: #1e293b; } .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 1.5rem; border-radius: 8px; overflow: hidden; } .markdown-body th, .markdown-body td { border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; vertical-align: top; } .markdown-body th { background-color: #f8fafc; font-weight: 800; text-align: center; color: #0f172a; } .markdown-body tr { page-break-inside: avoid; } .markdown-body h1 { font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 2rem; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 1rem; } .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: 800; color: #1e293b; } .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }`}</style>
                     
                     {namaSekolah && (
-                      <div style={{ textAlign: 'center', borderBottom: '3px solid black', paddingBottom: '16px', marginBottom: '32px', pageBreakAfter: 'avoid' }}>
-                        <h1 style={{ fontSize: '28px', fontWeight: '900', textTransform: 'uppercase', color: 'black', margin: '0', letterSpacing: '1px' }}>{namaSekolah}</h1>
+                      <div style={{ textAlign: 'center', borderBottom: '2px solid black', paddingBottom: '12px', marginBottom: '24px', pageBreakAfter: 'avoid' }}>
+                        <h1 style={{ fontSize: '22px', fontWeight: '900', textTransform: 'uppercase', color: 'black', margin: '0', letterSpacing: '1px' }}>{namaSekolah}</h1>
                       </div>
                     )}
 
@@ -503,33 +634,33 @@ export default function GeneratorPage() {
                     </div>
 
                     {(namaGuru || namaKepsek) && (
-                      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4rem', pageBreakInside: 'avoid', border: 'none' }}>
+                      <table className="sig-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4rem', pageBreakInside: 'avoid', border: 'none' }}>
                         <tbody>
                           <tr>
                             <td style={{ width: '50%', border: 'none' }}></td>
-                            <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>{kotaSekolah || "Nama Kota"}, {tanggalSekarang}</td>
+                            <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>{kotaSekolah || "........................"}, {tanggalSekarang}</td>
                           </tr>
-                          <tr><td colSpan={2} style={{ border: 'none', textAlign: 'center', paddingTop: '20px', paddingBottom: '30px' }}>Mengetahui,</td></tr>
+                          <tr><td colSpan={2} style={{ border: 'none', textAlign: 'center', paddingTop: '10px', paddingBottom: '20px' }}>Mengetahui,</td></tr>
                           <tr>
                             <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>Kepala Sekolah</td>
                             <td style={{ width: '50%', border: 'none', textAlign: 'center' }}>Guru Mata Pelajaran</td>
                           </tr>
-                          <tr><td style={{ border: 'none', height: '100px' }}></td><td style={{ border: 'none', height: '100px' }}></td></tr>
+                          <tr><td style={{ border: 'none', height: '80px' }}></td><td style={{ border: 'none', height: '80px' }}></td></tr>
                           <tr>
-                            <td style={{ width: '50%', border: 'none', textAlign: 'center' }}><strong><u>{namaKepsek || "Nama Lengkap"}</u></strong><br/>NIP. {nipKepsek || "-"}</td>
-                            <td style={{ width: '50%', border: 'none', textAlign: 'center' }}><strong><u>{namaGuru || "Nama Lengkap"}</u></strong><br/>NIP. {nipGuru || "-"}</td>
+                            <td style={{ width: '50%', border: 'none', textAlign: 'center' }}><strong><u>{namaKepsek || "..................................................."}</u></strong><br/>NIP. {nipKepsek || "........................"}</td>
+                            <td style={{ width: '50%', border: 'none', textAlign: 'center' }}><strong><u>{namaGuru || "..................................................."}</u></strong><br/>NIP. {nipGuru || "........................"}</td>
                           </tr>
                         </tbody>
                       </table>
                     )}
                   </div>
-                  {isStreaming && <span className="inline-block w-2 md:w-2.5 h-4 md:h-5 ml-1 bg-slate-400 animate-pulse align-middle mt-2"></span>}
+                  {isStreaming && <span className="inline-block w-2 md:w-2.5 h-4 md:h-5 ml-1 bg-indigo-500 animate-pulse align-middle mt-2 rounded-full"></span>}
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-20">
                   <div className="w-24 h-24 bg-[#F4F5F7] border border-slate-200 rounded-3xl flex items-center justify-center mb-6 text-5xl shadow-sm">🪄</div>
                   <h3 className="font-black text-slate-800 text-xl mb-2">Kanvas Masih Kosong</h3>
-                  <p className="text-sm max-w-sm text-slate-500">Pilih parameter di sebelah kiri dan tekan tombol Generate untuk mulai meracik perangkat ajar.</p>
+                  <p className="text-sm max-w-sm text-slate-500">Isi identitas di atas (diperlukan untuk Export), lalu tekan tombol Generate untuk mulai meracik perangkat ajar.</p>
                 </div>
               )}
             </div>

@@ -84,54 +84,54 @@ export default function KoleksiPage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto pb-24 md:pb-10 px-4 md:px-6 pt-4 md:pt-6 space-y-6">
+    <div className="max-w-[1400px] mx-auto pb-24 md:pb-10 px-3 md:px-6 pt-4 md:pt-6 space-y-4 md:space-y-6">
       
-      {/* HEADER TERPADU (Gaya Dashboard Premium) */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-5 md:p-8 rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-8">
+      {/* HEADER TERPADU (Desain Minimalis & Ringkas) */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-4 md:p-6 rounded-[20px] md:rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-4">
         
-        {/* Teks Header */}
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl md:text-3xl">📚</div>
+        {/* Teks Header - Lebih Kecil di HP */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl md:text-2xl shrink-0">📚</div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight leading-tight">Arsip Koleksi</h1>
-            <p className="text-[12px] md:text-sm text-slate-500 mt-1 font-medium">Dokumen perangkat ajar Anda yang telah di-generate AI.</p>
+            <h1 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight leading-none">Arsip Koleksi</h1>
+            <p className="text-[11px] md:text-sm text-slate-500 mt-1 font-medium">Dokumen perangkat ajar Anda.</p>
           </div>
         </div>
 
-        {/* Kontrol Pencarian & Filter */}
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        {/* Kontrol Pencarian & Filter - Sejajar di HP */}
+        <div className="flex flex-row gap-2 w-full">
           
           {/* Search Bar */}
-          <div className="relative w-full sm:w-[260px] lg:w-[320px]">
-            <svg className="w-4 h-4 md:w-5 md:h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <div className="relative flex-1">
+            <svg className="w-3.5 h-3.5 md:w-4 md:h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input 
               type="text" 
-              placeholder="Cari topik atau mapel..." 
+              placeholder="Cari mapel..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-3 md:py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none w-full shadow-sm text-[13px] md:text-sm font-medium text-slate-700 transition-all"
+              className="pl-8 pr-2 py-2 md:py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none w-full shadow-sm text-[12px] md:text-sm font-medium text-slate-700 transition-all h-9 md:h-10"
             />
           </div>
 
           {/* Filter Dropdown */}
-          <div className="relative w-full sm:w-[160px]">
+          <div className="relative w-[110px] sm:w-[150px] shrink-0">
             <select 
               value={filterTipe}
               onChange={(e) => setFilterTipe(e.target.value)}
-              className="w-full py-3 md:py-3.5 px-4 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[13px] md:text-sm font-bold text-slate-600 transition-all appearance-none shadow-sm cursor-pointer"
+              className="w-full py-2 md:py-2.5 px-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-[11px] md:text-sm font-bold text-slate-600 transition-all appearance-none shadow-sm cursor-pointer h-9 md:h-10 truncate"
             >
-              <option value="Semua">Semua Tipe</option>
-              <option value="Modul Ajar (PPM)">Modul Ajar (PPM)</option>
+              <option value="Semua">Semua</option>
+              <option value="Modul Ajar (PPM)">Modul</option>
               <option value="RPP">RPP</option>
-              <option value="Alur TP (ATP)">Alur TP (ATP)</option>
+              <option value="Alur TP (ATP)">ATP</option>
               <option value="Analisis TP">Analisis TP</option>
               <option value="PROMES">PROMES</option>
               <option value="PROTA">PROTA</option>
-              <option value="Bank Soal">Bank Soal</option>
+              <option value="Bank Soal">Soal</option>
               <option value="Rubrik Penilaian">Rubrik</option>
             </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </div>
           </div>
 
@@ -149,11 +149,11 @@ export default function KoleksiPage() {
           <p className="animate-pulse font-bold text-slate-600 text-sm md:text-base">Membuka Lemari Arsip...</p>
         </div>
       ) : (
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        // PERUBAHAN GRID: grid-cols-2 untuk layar HP (minimalis/padat)
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
           <AnimatePresence>
             {filteredData.length > 0 ? (
               filteredData.map((item) => {
-                // Tentukan warna tema berdasarkan Tipe Dokumen
                 const isModul = item.tipe.includes("Modul") || item.tipe.includes("RPP");
                 const isSoal = item.tipe.includes("Soal");
                 const isRubrik = item.tipe.includes("Rubrik");
@@ -168,51 +168,46 @@ export default function KoleksiPage() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                    className="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all p-5 md:p-6 group flex flex-col h-full"
+                    // Padding diperkecil di HP agar lebih hemat ruang
+                    className="bg-white rounded-[16px] md:rounded-[20px] border border-slate-100 shadow-sm hover:shadow-md transition-all p-3 md:p-4 flex flex-col h-full"
                   >
                     
-                    <div className="flex justify-between items-start mb-4">
-                      {/* Lencana (Badge) Tipe Dokumen */}
-                      <span className={`text-[10px] md:text-[11px] font-bold px-3 py-1.5 rounded-xl border flex items-center gap-1.5
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
+                      <span className={`text-[9px] md:text-[10px] font-bold px-2 py-1 rounded-md border inline-flex items-center gap-1 w-max
                         ${themeColor === "indigo" ? "bg-indigo-50 text-indigo-700 border-indigo-100" : 
                           themeColor === "rose" ? "bg-rose-50 text-rose-700 border-rose-100" : 
                           themeColor === "purple" ? "bg-purple-50 text-purple-700 border-purple-100" : 
                           "bg-emerald-50 text-emerald-700 border-emerald-100"}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                           themeColor === "indigo" ? "bg-indigo-500" : themeColor === "rose" ? "bg-rose-500" : themeColor === "purple" ? "bg-purple-500" : "bg-emerald-500"
                         }`}></div>
-                        {item.tipe}
+                        <span className="truncate max-w-[80px] md:max-w-full">{item.tipe}</span>
                       </span>
-                      {/* Tanggal */}
-                      <span className="text-[10px] md:text-[11px] text-slate-400 font-bold bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">{item.tanggal}</span>
+                      <span className="text-[9px] text-slate-400 font-semibold">{item.tanggal}</span>
                     </div>
 
-                    {/* Judul & Detail */}
-                    <div className="flex-1">
-                      <h3 className="font-bold text-base md:text-lg text-slate-800 leading-snug mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2">
+                    <div className="flex-1 mt-1">
+                      <h3 className="font-bold text-[13px] md:text-sm text-slate-800 leading-tight mb-1.5 line-clamp-2" title={item.topik}>
                         {item.topik}
                       </h3>
-                      <div className="flex items-center gap-2 text-[11px] md:text-xs font-semibold text-slate-500">
-                        <span className="bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[120px] md:max-w-[150px]">{item.mapel}</span>
-                        <span>•</span>
+                      <div className="text-[10px] md:text-[11px] font-semibold text-slate-500 flex flex-col gap-0.5">
+                        <span className="truncate">{item.mapel}</span>
                         <span>{item.fase.split(' ')[0] + " " + (item.fase.split(' ')[1] || '')}</span>
                       </div>
                     </div>
 
-                    {/* Tombol Aksi */}
-                    <div className="mt-5 pt-4 border-t border-slate-100 flex gap-2">
+                    <div className="mt-3 pt-3 border-t border-slate-50 flex gap-1.5">
                       <Link href={`/guru/koleksi/${item.id}`} className="flex-1">
-                        <button className="w-full bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 py-2.5 rounded-xl text-[12px] md:text-[13px] font-bold transition-all border border-slate-200 hover:border-indigo-200 flex items-center justify-center gap-2 active:scale-[0.98]">
-                          Buka Dokumen
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                        <button className="w-full bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 py-1.5 md:py-2 rounded-lg text-[10px] md:text-[12px] font-bold transition-all border border-slate-200 hover:border-indigo-200 flex items-center justify-center gap-1 active:scale-[0.98]">
+                          Buka
                         </button>
                       </Link>
                       <button 
                         onClick={() => handleDelete(item.id)} 
-                        className="p-2.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-all border border-slate-200 hover:border-rose-200 flex items-center justify-center active:scale-[0.98]" 
-                        title="Hapus Dokumen"
+                        className="p-1.5 md:p-2 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all border border-slate-200 hover:border-rose-200 flex items-center justify-center active:scale-[0.98] shrink-0" 
+                        title="Hapus"
                       >
-                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       </button>
                     </div>
 
@@ -220,23 +215,21 @@ export default function KoleksiPage() {
                 );
               })
             ) : (
-              // EMPTY STATE YANG LEBIH INTERAKTIF
               <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="col-span-full py-16 md:py-24 flex flex-col items-center justify-center text-center bg-white rounded-[32px] border border-slate-100 border-dashed"
+                className="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white rounded-[24px] border border-slate-100 border-dashed"
               >
-                <div className="w-20 h-20 md:w-24 md:h-24 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-center mb-6 text-4xl md:text-5xl shadow-inner">🗂️</div>
-                <h3 className="font-black text-slate-800 mb-2 text-lg md:text-xl">Lemari Arsip Kosong</h3>
-                <p className="text-[13px] md:text-sm text-slate-500 max-w-sm px-4 mb-6">
+                <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mb-4 text-3xl shadow-inner">🗂️</div>
+                <h3 className="font-black text-slate-800 mb-1 text-base">Arsip Kosong</h3>
+                <p className="text-[11px] md:text-[13px] text-slate-500 max-w-xs px-4 mb-4">
                   {search !== "" 
-                    ? "Kata kunci yang Anda cari tidak ditemukan dalam arsip." 
-                    : "Anda belum pernah meracik dokumen apa pun. Mari mulai buat perangkat ajar pertama Anda!"}
+                    ? "Kata kunci tidak ditemukan." 
+                    : "Belum ada dokumen yang dibuat."}
                 </p>
                 {search === "" && (
                   <Link href="/guru/generator">
-                    <button className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-[13px] md:text-sm flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                      Buat Dokumen Sekarang
+                    <button className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg shadow-sm text-[11px] md:text-[13px]">
+                      Buat Sekarang
                     </button>
                   </Link>
                 )}

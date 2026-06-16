@@ -85,18 +85,19 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 font-sans">
+    // UBAH BARIS CLASSNAME INI (Hapus fixed bottom-6 right-6 z-50, ganti jadi relative)
+    <div className="relative font-sans flex items-center justify-center">
       <AnimatePresence>
         {isOpen && (
           <motion.div 
-            initial={{ opacity: 0, y: 20, scale: 0.95 }} 
+            initial={{ opacity: 0, y: 10, scale: 0.95 }} 
             animate={{ opacity: 1, y: 0, scale: 1 }} 
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            // 🔥 PERBAIKAN RESPONSIVE DI BARIS INI: menambahkan max-h-[calc(100vh-130px)] dan origin-bottom-right
-            className="bg-[#E4EBEF] w-[360px] h-[550px] max-h-[calc(100vh-130px)] mb-4 rounded-[20px] shadow-[0_10px_40px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden border border-slate-200/60 transform origin-bottom-right"
+            // UBAH BARIS INI (Tambahkan absolute right-0 top-12)
+            className="absolute right-0 top-12 bg-[#E4EBEF] w-[320px] md:w-[360px] h-[500px] md:h-[550px] max-h-[calc(100vh-100px)] rounded-[20px] shadow-2xl flex flex-col overflow-hidden border border-slate-200/60 transform origin-top-right z-50"
           >
-            {/* ================= HEADER ALA TELEGRAM ================= */}
+
             <div className="bg-white px-4 py-3 flex items-center justify-between shadow-sm z-10 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -193,17 +194,13 @@ export default function ChatWidget() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ================= TOMBOL FLOATING ================= */}
+      
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-16 h-16 bg-[#3390EC] text-white rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(51,144,236,0.4)] hover:scale-105 active:scale-95 transition-all ml-auto"
+        className={`p-2 rounded-full transition-colors flex items-center justify-center z-50 ${isOpen ? 'text-[#3390EC] bg-blue-50' : 'text-slate-400 hover:text-[#3390EC] hover:bg-blue-50'}`}
+        title="Asisten AI"
       >
-        {isOpen ? (
-           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-        )}
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
       </button>
     </div>
   );

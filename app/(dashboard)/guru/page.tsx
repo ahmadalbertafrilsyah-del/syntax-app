@@ -6,13 +6,20 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import ChatWidget from "@/components/ChatWidget"; // 👈 SUNTIKAN WIDGET CHAT AI
 
 export default function GuruDashboard() {
   const { user } = useAuth();
   const [userData, setUserData] = useState<any>(null);
   const [recentDocs, setRecentDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // --- STATE UNTUK AI FUNNEL HEALTH (DATA REAL) ---
+  const [analytics, setAnalytics] = useState({
+    modulAjar: { count: 0, percentage: 0 },
+    bankSoal: { count: 0, percentage: 0 },
+    analisis: { count: 0, percentage: 0 },
+    totalUsage: 0
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -23,17 +30,38 @@ export default function GuruDashboard() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) setUserData(docSnap.data());
 
-        // 2. Fetch Recent Documents (4 Terakhir untuk list Bento)
+        // 2. Fetch Recent Documents & Kalkulasi Analytics
         const q = query(
           collection(db, "dokumen"), 
           where("id_user", "==", user.uid)
         );
         const querySnapshot = await getDocs(q);
         
-        // Manual sort by date
         const docs = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() as any }));
         docs.sort((a, b) => (b.dibuat_pada?.toMillis() || 0) - (a.dibuat_pada?.toMillis() || 0));
         setRecentDocs(docs.slice(0, 4));
+
+        // --- PROSES KALKULASI AI FUNNEL HEALTH ---
+        const totalDocs = docs.length;
+        if (totalDocs > 0) {
+          let countModul = 0;
+          let countSoal = 0;
+          let countAnalisis = 0;
+
+          docs.forEach(doc => {
+            const tipe = doc.tipe || "";
+            if (tipe.includes("Modul") || tipe.includes("RPP") || tipe.includes("PPM")) countModul++;
+            else if (tipe.includes("Soal") || tipe.includes("Rubrik")) countSoal++;
+            else if (tipe.includes("Analisis") || tipe.includes("ATP") || tipe.includes("PROTA") || tipe.includes("PROMES")) countAnalisis++;
+          });
+
+          setAnalytics({
+            modulAjar: { count: countModul, percentage: Math.round((countModul / totalDocs) * 100) },
+            bankSoal: { count: countSoal, percentage: Math.round((countSoal / totalDocs) * 100) },
+            analisis: { count: countAnalisis, percentage: Math.round((countAnalisis / totalDocs) * 100) },
+            totalUsage: totalDocs
+          });
+        }
 
       } catch (error) {
         console.error("Gagal memuat data:", error);
@@ -50,7 +78,6 @@ export default function GuruDashboard() {
     window.open(`https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(pesan)}`, "_blank");
   };
 
-  // Sapaan Dinamis
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -59,16 +86,11 @@ export default function GuruDashboard() {
     return "Good night";
   };
 
-  if (loading) {
-    return <div className="p-8 animate-pulse text-slate-400 font-bold">Memuat command center...</div>;
-  }
+  if (loading) return <div className="p-8 animate-pulse text-slate-400 font-bold">Memuat command center...</div>;
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      
-      {/* ============================================================== */}
-      {/* HEADER / GREETING (Gaya Modern SaaS)                             */}
-      {/* ============================================================== */}
+      {/* ... [KODE HEADER & GREETING TETAP SAMA] ... */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-2">
         <div>
           <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-3xl md:text-[42px] font-black text-slate-800 tracking-tight leading-tight">
@@ -84,12 +106,9 @@ export default function GuruDashboard() {
         </motion.div>
       </div>
 
-      {/* ============================================================== */}
-      {/* BENTO BOX GRID LAYOUT                                          */}
-      {/* ============================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* CARD 1: SISA TOKEN */}
+        {/* ... [CARD 1, 2, & 3 TETAP SAMA] ... */}
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="lg:col-span-4 bg-gradient-to-br from-[#FF6B4A] to-[#FF4B2B] rounded-[32px] p-8 text-white shadow-[0_20px_40px_rgba(255,107,74,0.2)] flex flex-col justify-between relative overflow-hidden group">
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-6">
@@ -113,7 +132,6 @@ export default function GuruDashboard() {
           <div className="absolute -bottom-12 -right-12 w-56 h-56 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
         </motion.div>
 
-        {/* CARD 2: COBA FITUR VISION */}
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="lg:col-span-8 bg-gradient-to-br from-[#10b981] to-[#059669] rounded-[32px] p-8 md:p-10 text-white shadow-[0_20px_40px_rgba(16,185,129,0.2)] flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group">
           <div className="flex-1 relative z-10">
             <span className="bg-white/20 text-white text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full mb-5 inline-block shadow-inner">Fitur Unggulan</span>
@@ -133,7 +151,6 @@ export default function GuruDashboard() {
           <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4"></div>
         </motion.div>
 
-        {/* CARD 3: RIWAYAT DOKUMEN */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-5 bg-white rounded-[32px] p-8 shadow-sm flex flex-col border border-slate-100/50">
           <div className="flex justify-between items-end mb-6">
             <div>
@@ -144,7 +161,6 @@ export default function GuruDashboard() {
               View All
             </Link>
           </div>
-          
           <div className="space-y-2 flex-1">
             {recentDocs.length > 0 ? recentDocs.map((doc: any, i) => (
               <Link key={doc.id} href={`/guru/koleksi/${doc.id}`}>
@@ -172,7 +188,7 @@ export default function GuruDashboard() {
           </div>
         </motion.div>
 
-        {/* CARD 4: AI ANALYTICS */}
+        {/* CARD 4: AI ANALYTICS (SEKARANG MENGGUNAKAN DATA REAL) */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="lg:col-span-7 bg-white rounded-[32px] p-8 shadow-sm border border-slate-100/50 flex flex-col justify-between">
            <div className="flex justify-between items-start mb-8">
             <div>
@@ -186,51 +202,47 @@ export default function GuruDashboard() {
             <div>
               <div className="flex justify-between text-[11px] uppercase tracking-wider font-bold mb-2">
                 <span className="text-slate-500">Modul Ajar / RPP</span>
-                <span className="text-slate-800">86%</span>
+                <span className="text-slate-800">{analytics.modulAjar.percentage}%</span>
               </div>
               <div className="w-full bg-[#F4F5F7] h-3 rounded-full overflow-hidden">
-                <div className="bg-[#FF6B4A] h-full rounded-full" style={{ width: '86%' }}></div>
+                <div className="bg-[#FF6B4A] h-full rounded-full transition-all duration-1000" style={{ width: `${analytics.modulAjar.percentage}%` }}></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between text-[11px] uppercase tracking-wider font-bold mb-2">
                 <span className="text-slate-500">Bank Soal & Rubrik</span>
-                <span className="text-slate-800">62%</span>
+                <span className="text-slate-800">{analytics.bankSoal.percentage}%</span>
               </div>
               <div className="w-full bg-[#F4F5F7] h-3 rounded-full overflow-hidden">
-                <div className="bg-[#1E1E1E] h-full rounded-full" style={{ width: '62%' }}></div>
+                <div className="bg-[#1E1E1E] h-full rounded-full transition-all duration-1000" style={{ width: `${analytics.bankSoal.percentage}%` }}></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between text-[11px] uppercase tracking-wider font-bold mb-2">
                 <span className="text-slate-500">Analisis TP & ATP</span>
-                <span className="text-slate-800">45%</span>
+                <span className="text-slate-800">{analytics.analisis.percentage}%</span>
               </div>
               <div className="w-full bg-[#F4F5F7] h-3 rounded-full overflow-hidden">
-                <div className="bg-[#10b981] h-full rounded-full" style={{ width: '45%' }}></div>
+                <div className="bg-[#10b981] h-full rounded-full transition-all duration-1000" style={{ width: `${analytics.analisis.percentage}%` }}></div>
               </div>
             </div>
           </div>
 
           <div className="mt-8 pt-6 border-t border-slate-100 flex gap-4">
             <div className="flex-1 bg-[#F4F5F7] p-4 rounded-2xl border border-slate-200/50">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Usage</p>
-              <p className="text-2xl font-black text-slate-800 mt-1">18.4K</p>
-              <p className="text-[10px] font-bold text-emerald-500 mt-1">↑ 8% this month</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Usage (Total)</p>
+              <p className="text-2xl font-black text-slate-800 mt-1">{analytics.totalUsage}</p>
+              <p className="text-[10px] font-bold text-emerald-500 mt-1">Dokumen dibuat</p>
             </div>
             <div className="flex-1 bg-[#F4F5F7] p-4 rounded-2xl border border-slate-200/50">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Efisiensi</p>
-              <p className="text-2xl font-black text-slate-800 mt-1">4.82x</p>
-              <p className="text-[10px] font-bold text-emerald-500 mt-1">↑ Lebih cepat</p>
+              <p className="text-2xl font-black text-slate-800 mt-1">Aktif</p>
+              <p className="text-[10px] font-bold text-emerald-500 mt-1">Sistem berjalan optimal</p>
             </div>
           </div>
         </motion.div>
 
       </div>
-
-      {/* 👈 PEMANGGILAN KOMPONEN CHAT WIDGET DI SINI */}
-      <ChatWidget />
-      
     </div>
   );
 }

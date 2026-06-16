@@ -6,6 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import ChatWidget from "@/components/ChatWidget"; // MEMANGGIL CHATBOT DI SINI
 
 export default function GuruHeader() {
   const { user } = useAuth();
@@ -14,12 +15,10 @@ export default function GuruHeader() {
   const [userData, setUserData] = useState<any>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // State khusus Notifikasi
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Jalankan jam real-time setiap detik
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -32,11 +31,8 @@ export default function GuruHeader() {
     return `${hari}, ${tanggal} • ${jam}`;
   };
 
-  // Mengambil Data User & Notifikasi Real-time
   useEffect(() => {
     if (!user) return;
-
-    // 1. Ambil Data Profil User
     const fetchUserData = async () => {
       const docRef = doc(db, "users", user.uid);
       const docSnap = await getDoc(docRef);
@@ -44,7 +40,6 @@ export default function GuruHeader() {
     };
     fetchUserData();
 
-    // 2. Listener Real-time Notifikasi
     const notifRef = collection(db, "notifications");
     const q = query(notifRef, where("userId", "in", [user.uid, "all"]));
     
@@ -83,18 +78,13 @@ export default function GuruHeader() {
   if (!user) return null;
 
   return (
-    // UBAH: justify-end dihapus, diganti justify-between agar logo HP ada di kiri
-    <header className="px-4 md:px-8 pt-4 md:pt-6 pb-2 w-full flex items-center justify-between z-30 sticky top-0 bg-[#F4F5F7]/80 backdrop-blur-md">
+    <header className="px-4 md:px-8 pt-4 md:pt-6 pb-2 w-full flex items-center justify-between z-40 sticky top-0 bg-[#F4F5F7]/80 backdrop-blur-md">
       
-      {/* ================= KIRI ================= */}
-      
-      {/* 1. Logo Syntax (Muncul KHUSUS di HP) */}
       <div className="flex md:hidden items-center gap-2 pl-1">
         <img src="https://i.ibb.co.com/JjK2w93q/LOGO-SYNTAX.png" alt="Logo" className="w-6 h-6 object-contain drop-shadow-sm" />
         <span className="text-[18px] font-black text-indigo-600 tracking-tight">Syntax</span>
       </div>
 
-      {/* 2. Jam Real-time (Muncul KHUSUS di Desktop/Tablet) */}
       <div className="hidden md:flex items-center bg-white px-4 py-2.5 rounded-full shadow-sm border border-slate-100/80">
         <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
           <span className="relative flex h-2.5 w-2.5">
@@ -105,15 +95,20 @@ export default function GuruHeader() {
         </span>
       </div>
 
-      {/* ================= KANAN ================= */}
-      {/* Lonceng, User Profile & Logout (Pill UI Ala Bento Box) */}
-      <div className="flex items-center gap-2 bg-white p-1.5 pr-2 md:pr-4 rounded-full shadow-sm border border-slate-100/80 shrink-0">
+      <div className="flex items-center gap-2 bg-white p-1.5 pr-2 md:pr-4 rounded-full shadow-sm border border-slate-100/80 shrink-0 relative">
         
-        {/* WADAH NOTIFIKASI */}
-        <div className="relative ml-1 md:ml-2">
+        {/* TAMPILAN WIDGET CHATBOT PINDAH KESINI */}
+        <div className="relative z-50">
+          <ChatWidget />
+        </div>
+
+        <div className="h-6 w-px bg-slate-200 mx-0.5"></div>
+
+        {/* WADAH NOTIFIKASI (Dengan perbaikan responsif layar kecil) */}
+        <div className="relative ml-1">
           <button 
             onClick={() => setIsNotifOpen(!isNotifOpen)} 
-            className={`p-2 rounded-full transition-colors relative ${isNotifOpen ? 'text-[#FF4B2B] bg-orange-50' : 'text-slate-400 hover:text-[#FF4B2B] hover:bg-orange-50'}`}
+            className={`p-2 rounded-full transition-colors relative z-50 ${isNotifOpen ? 'text-[#FF4B2B] bg-orange-50' : 'text-slate-400 hover:text-[#FF4B2B] hover:bg-orange-50'}`}
             title="Pemberitahuan"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
@@ -137,7 +132,8 @@ export default function GuruHeader() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                className="absolute right-0 mt-3 w-[300px] md:w-96 bg-white rounded-[24px] shadow-2xl border border-slate-100 overflow-hidden z-50 origin-top-right"
+                // PERBAIKAN RESPONSIVE: Menggunakan w-[calc(100vw-32px)] untuk HP dan w-96 untuk Desktop
+                className="absolute right-0 mt-3 w-[calc(100vw-32px)] md:w-96 bg-white rounded-[24px] shadow-2xl border border-slate-100 overflow-hidden z-50 origin-top-right transform translate-x-[4px] md:translate-x-0"
               >
                 <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
                   <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -151,7 +147,7 @@ export default function GuruHeader() {
                     notifications.map((notif) => (
                       <div key={notif.id} className={`p-5 border-b border-slate-50 transition-colors hover:bg-slate-50 cursor-pointer flex gap-4 items-start ${!notif.isRead ? 'bg-indigo-50/30' : ''}`}>
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'admin' ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                          {notif.type === 'admin' ? '🤖' : '💡'}
+                          {notif.type === 'admin' ? '📣' : '🔔'}
                         </div>
                         <div>
                           <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{notif.title}</h4>
@@ -202,7 +198,6 @@ export default function GuruHeader() {
         </button>
 
       </div>
-      
     </header>
   );
 }

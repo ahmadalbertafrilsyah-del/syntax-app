@@ -170,19 +170,28 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: { isSidebar
       </aside>
 
       {/* ========================================================= */}
-      {/* MOBILE BOTTOM NAVIGATION (Floating Pill Style)              */}
+      {/* MOBILE BOTTOM NAVIGATION (Elegant Box Style)                */}
       {/* ========================================================= */}
-      <nav className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md border border-white/50 rounded-full flex flex-nowrap items-center h-16 z-50 px-3 shadow-[0_8px_30px_rgba(0,0,0,0.08)] overflow-x-auto hide-scrollbar gap-1">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-xl border-t border-slate-200 flex justify-around items-center h-[70px] z-50 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] pb-safe">
         {currentMenuItems.map((item) => {
           const isActive = pathname === item.path;
           return (
-            <Link key={item.name} href={item.path} className={`flex-1 flex flex-col items-center justify-center h-[85%] min-w-[64px] rounded-full space-y-1 active:scale-95 transition-all shrink-0 ${isActive ? 'bg-[#1E1E1E]' : 'bg-transparent'}`}>
-              <span className={`text-[18px] ${isActive ? 'grayscale-0 opacity-100 scale-110 transition-transform' : 'grayscale opacity-60'}`}>
+            <Link 
+              key={item.name} 
+              href={item.path} 
+              className={`flex flex-col items-center justify-center flex-1 h-full relative transition-all duration-300 
+                ${isActive ? 'text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              {/* Indikator aktif elegan (Garis atas) */}
+              {isActive && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[3px] bg-slate-800 rounded-b-full shadow-sm"></span>
+              )}
+              
+              <span className={`text-[22px] transition-transform duration-300 ${isActive ? 'scale-110 mb-0.5 grayscale-0' : 'mb-0.5 grayscale opacity-70'}`}>
                 {item.icon}
               </span>
-              <span className={`text-[9px] font-bold truncate px-1 max-w-full ${
-                isActive ? 'text-white' : 'text-slate-500'
-              }`}>
+              
+              <span className={`text-[10px] font-bold tracking-tight transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-70'}`}>
                 {item.mobileName}
               </span>
             </Link>
