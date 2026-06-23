@@ -95,7 +95,6 @@ export default function AkademikSiswaPage() {
     if (!namaKelasBaru.trim()) return;
     setIsCreatingKelas(true);
     try {
-      // Generate Kode 8 Karakter (Alfanumerik)
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let kodeUnik = '';
       for (let i = 0; i < 8; i++) {
@@ -172,7 +171,40 @@ export default function AkademikSiswaPage() {
     }, 2000);
   };
 
+  // 🔥 FUNGSI EXPORT DATA KE CSV (EXCEL)
+  const handleExportCSV = () => {
+    if (siswaSubmissions.length === 0) return alert("Belum ada data untuk diekspor.");
+
+    // Buat header CSV
+    let csvContent = "Nama Siswa,UID Siswa,Kelas,Status,Nilai,Catatan Guru\n";
+
+    // Tambahkan baris data
+    siswaSubmissions.forEach(siswa => {
+      const nama = `"${siswa.nama_siswa || '-'}"`;
+      const uid = `"${siswa.uid_siswa || '-'}"`;
+      const kelas = `"${siswa.kelas || '-'}"`;
+      const status = `"${siswa.status || '-'}"`;
+      const nilai = siswa.nilai !== null ? siswa.nilai : "Belum Dinilai";
+      const catatan = `"${(siswa.catatan_guru || '').replace(/"/g, '""')}"`; // Escape quotes
+
+      csvContent += `${nama},${uid},${kelas},${status},${nilai},${catatan}\n`;
+    });
+
+    // Buat blob dan trigger download
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); // \uFEFF for Excel UTF-8 BOM
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeTitle = selectedTugas?.judul.replace(/[^a-zA-Z0-9]/g, '_') || 'Rekap';
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Rekap_Nilai_${safeTitle}_${selectedTugas?.kelas}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // ================= UTILS & ANALYTICS =================
+  const dinamisDaftarKelas = ["Semua Kelas", ...Array.from(new Set(tugasAktifList.map(t => t.kelas)))];
   const filteredTugas = selectedKelasFilter === "Semua Kelas" ? tugasAktifList : tugasAktifList.filter(t => t.kelas === selectedKelasFilter);
 
   const parseSoalSiswa = (kontenAI: string) => {
@@ -326,8 +358,7 @@ export default function AkademikSiswaPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                   <div className="flex items-center gap-3 w-full sm:w-auto">
                     <select value={selectedKelasFilter} onChange={(e) => setSelectedKelasFilter(e.target.value)} className="p-3 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-700 outline-none shadow-sm flex-1 sm:flex-none">
-                      <option value="Semua Kelas">Semua Kelas</option>
-                      {kelasList.map(k => <option key={k.id} value={k.nama_kelas}>{k.nama_kelas}</option>)}
+                      {dinamisDaftarKelas.map(k => <option key={k} value={k}>{k}</option>)}
                     </select>
                     <button onClick={() => setShowKelasModal(true)} className="px-5 py-3 bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 font-bold text-[13px] rounded-xl border border-slate-200 transition-colors shrink-0">
                       🏫 Manajemen Kelas
@@ -402,7 +433,7 @@ export default function AkademikSiswaPage() {
                     <h3 className="text-lg font-black text-slate-800 border-b pb-3 mb-5">2. Pengaturan Distribusi</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <div><label className="text-[12px] font-bold text-slate-500 mb-2 block">Judul Modul / Ujian</label><input required value={formJudul} onChange={e=>setFormJudul(e.target.value)} type="text" placeholder="Misal: Kuis Sistem Pencernaan" className="w-full p-3.5 bg-[#F4F5F7] rounded-xl border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-[13px]"/></div>
-                      <div><label className="text-[12px] font-bold text-slate-500 mb-2 block">Mata Pelajaran</label><input required value={formMapel} onChange={e=>setFormMapel(e.target.value)} type="text" placeholder="Biologi" className="w-full p-3.5 bg-[#F4F5F7] rounded-xl border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-[13px]"/></div>
+                      <div><label className="text-[12px] font-bold text-slate-500 mb-2 block">Mata Pelajaran</label><input required value={formMapel} onChange={e=>setFormMapel(e.target.value)} type="text" placeholder="Misal: Biologi" className="w-full p-3.5 bg-[#F4F5F7] rounded-xl border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-[13px]"/></div>
                       
                       {/* DROPDOWN KELAS DINAMIS DARI DATABASE */}
                       <div>
@@ -551,7 +582,10 @@ export default function AkademikSiswaPage() {
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-black text-slate-800 text-lg">Daftar Pengumpulan</h3>
                       {selectedTugas.tipe_tugas !== 'Materi Bacaan' && (
-                         <button className="text-[11px] font-bold px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-200">📥 Download Nilai (CSV)</button>
+                         // 🔥 TOMBOL EKSPOR CSV ADA DI SINI
+                         <button onClick={handleExportCSV} className="text-[11px] font-bold px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition-colors shadow-sm flex items-center gap-2 active:scale-95">
+                           📥 Download Nilai (CSV)
+                         </button>
                       )}
                     </div>
 

@@ -2,8 +2,51 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
+
+  // 🛡️ PENJAGA PINTU (Auto-Redirect Jika Sudah Login)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const role = userDoc.data().role;
+            if (role === "admin") router.push("/admin");
+            else if (role === "siswa") router.push("/siswa");
+            else router.push("/guru");
+          } else {
+            router.push("/guru"); // Fallback
+          }
+        } catch (error) {
+          console.error("Gagal mendeteksi sesi:", error);
+          setIsChecking(false);
+        }
+      } else {
+        setIsChecking(false); // User belum login, tampilkan Landing Page
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  // Tampilkan layar loading saat mengecek sesi
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+         <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans overflow-x-hidden scroll-smooth relative">
       
@@ -48,14 +91,14 @@ export default function LandingPage() {
             </div>
 
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6">
-              Asisten AI Untuk <br className="hidden lg:block" />
+              Platform LMS <br className="hidden lg:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                Guru Modern.
+                Paling Interaktif.
               </span>
             </h1>
             
             <p className="text-lg md:text-xl text-slate-500 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
-              Tinggalkan administrasi yang melelahkan. Buat Modul Ajar, RPP, dan Bank Soal berstandar Kurikulum Merdeka hanya dalam <strong>hitungan detik</strong>.
+              Ekosistem pendidikan terpadu. Hubungkan Pendidik dengan AI Generator, dan Peserta Didik dengan Ruang Belajar Digital CBT dalam <strong>satu aplikasi</strong>.
             </p>
           </motion.div>
 
@@ -65,7 +108,7 @@ export default function LandingPage() {
           >
             <Link href="/login" className="w-full sm:w-auto">
               <button className="w-full sm:w-auto px-10 py-4 text-[15px] font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-2xl shadow-[0_0_40px_rgba(79,70,229,0.3)] hover:shadow-[0_0_60px_rgba(79,70,229,0.5)] transition-all flex items-center justify-center gap-3 active:scale-95 border border-indigo-500">
-                Mulai Gunakan AI <span className="text-xl">✨</span>
+                Mulai Gunakan Syntax <span className="text-xl">✨</span>
               </button>
             </Link>
             <Link href="#fitur" className="w-full sm:w-auto">
@@ -83,7 +126,7 @@ export default function LandingPage() {
               <img src="https://i.pravatar.cc/100?img=3" alt="User" className="w-10 h-10 rounded-full border-2 border-slate-50 shadow-sm" />
               <div className="w-10 h-10 rounded-full border-2 border-slate-50 bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-sm">+1k</div>
             </div>
-            <p className="text-xs font-bold text-slate-500">Dipercaya oleh ribuan pendidik.</p>
+            <p className="text-xs font-bold text-slate-500">Dipercaya oleh ribuan Pendidik & Siswa.</p>
           </motion.div>
         </div>
 
@@ -100,7 +143,7 @@ export default function LandingPage() {
             >
                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                <img src="https://i.ibb.co.com/J0jVHbG/Syntax-Icon.png" alt="Syntax Big Icon" className="w-40 h-40 object-contain drop-shadow-xl z-10" />
-               <div className="absolute bottom-6 text-xs font-black text-slate-300 tracking-[0.3em] uppercase z-10">AI Engine</div>
+               <div className="absolute bottom-6 text-xs font-black text-slate-300 tracking-[0.3em] uppercase z-10">LMS CORE</div>
             </motion.div>
 
             {/* Floating Badges 1 */}
@@ -108,10 +151,10 @@ export default function LandingPage() {
                animate={{ x: [-5, 5, -5], y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, delay: 0.5 }}
                className="absolute -top-6 -right-12 lg:-right-20 bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3"
             >
-              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-xl">📄</div>
+              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-xl">👨‍🏫</div>
               <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Generate</div>
-                <div className="text-sm font-black text-slate-700">Modul Ajar PDF</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Akses Guru</div>
+                <div className="text-sm font-black text-slate-700">AI Perangkat Ajar</div>
               </div>
             </motion.div>
 
@@ -120,10 +163,10 @@ export default function LandingPage() {
                animate={{ x: [5, -5, 5], y: [0, 10, 0] }} transition={{ duration: 5, repeat: Infinity, delay: 1 }}
                className="absolute -bottom-10 -left-8 lg:-left-16 bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3"
             >
-              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-xl">💯</div>
+              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-xl">🎓</div>
               <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Auto-Korektor</div>
-                <div className="text-sm font-black text-slate-700">Evaluasi Esai</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Akses Siswa</div>
+                <div className="text-sm font-black text-slate-700">Ruang Ujian CBT</div>
               </div>
             </motion.div>
           </motion.div>
@@ -135,9 +178,9 @@ export default function LandingPage() {
       <section id="fitur" className="py-24 bg-white px-6 sm:px-12 lg:px-24 relative z-10 border-t border-slate-100 mt-20">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-             <span className="text-indigo-600 font-black tracking-widest uppercase text-sm">Alur Kerja</span>
+             <span className="text-indigo-600 font-black tracking-widest uppercase text-sm">Alur Ekosistem</span>
              <h2 className="text-3xl md:text-5xl font-black text-slate-900 mt-2 mb-4">Cara Kerja <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 italic">Syntax.</span></h2>
-             <p className="text-slate-500 max-w-xl mx-auto text-sm md:text-base font-medium">Ubah instruksi sederhana menjadi dokumen pendidikan berstandar nasional secara instan.</p>
+             <p className="text-slate-500 max-w-xl mx-auto text-sm md:text-base font-medium">Platform end-to-end yang menghubungkan pendidik dan peserta didik dalam hitungan detik.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 relative">
@@ -145,9 +188,9 @@ export default function LandingPage() {
             <div className="hidden md:block absolute top-1/2 left-[10%] right-[10%] h-0.5 bg-slate-100 -translate-y-1/2 z-0"></div>
 
             {[
-              { step: "01", title: "Input Instruksi", desc: "Masukkan mata pelajaran, fase, dan topik materi yang ingin diajarkan ke dalam form.", icon: "📝" },
-              { step: "02", title: "AI Memproses", desc: "Mesin Gemini AI memproses struktur sesuai standar Kurikulum Merdeka terbaru.", icon: "⚙️" },
-              { step: "03", title: "Dokumen Siap", desc: "Unduh file hasil langsung dalam format profesional siap cetak / PDF.", icon: "🚀" },
+              { step: "01", title: "Generate Materi", desc: "Guru membuat RPP, Modul, atau Bank Soal dengan AI secara otomatis.", icon: "📝" },
+              { step: "02", title: "Terbitkan Tugas", desc: "Materi didistribusikan ke kelas digital dan langsung masuk ke dashboard Siswa.", icon: "🚀" },
+              { step: "03", title: "Koreksi Otomatis", desc: "Siswa mengerjakan CBT dan Auto-Korektor AI menilai secara instan.", icon: "💯" },
             ].map((f, i) => (
               <motion.div 
                 key={i}

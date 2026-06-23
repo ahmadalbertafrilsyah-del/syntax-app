@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loginWithEmail, registerWithEmail, loginWithGoogle } from "@/lib/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 
 export default function LoginPage() {
@@ -18,6 +18,9 @@ export default function LoginPage() {
   const [nama, setNama] = useState("");
   const [sekolah, setSekolah] = useState("");
   
+  // 🔥 STATE BARU: Pemilih Peran (Default: Siswa)
+  const [roleDaftar, setRoleDaftar] = useState<"guru" | "siswa">("siswa");
+  
   // State untuk status UI
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -27,10 +30,13 @@ export default function LoginPage() {
     if (auth.currentUser) {
       try {
         const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-        if (userDoc.exists() && userDoc.data().role === "admin") {
-          router.push("/admin");
+        if (userDoc.exists()) {
+          const userRole = userDoc.data().role;
+          if (userRole === "admin") router.push("/admin");
+          else if (userRole === "siswa") router.push("/siswa");
+          else router.push("/guru");
         } else {
-          router.push("/guru");
+          router.push("/guru"); 
         }
       } catch (err) {
         console.error("Gagal mengambil role pengguna:", err);
@@ -50,6 +56,12 @@ export default function LoginPage() {
         await loginWithEmail(email, password);
       } else {
         await registerWithEmail(email, password, nama, sekolah);
+        
+        // 🔥 INJEKSI ROLE: Setelah akun terbuat, langsung update role-nya di Firestore
+        if (auth.currentUser) {
+          const userRef = doc(db, "users", auth.currentUser.uid);
+          await updateDoc(userRef, { role: roleDaftar });
+        }
       }
       await redirectBasedOnRole();
     } catch (err: any) {
@@ -67,6 +79,7 @@ export default function LoginPage() {
     setError("");
     try {
       await loginWithGoogle();
+      // Catatan: Login Google by default akan menjadi Guru kecuali diset manual di database
       await redirectBasedOnRole();
     } catch (err) {
       setError("Gagal login dengan Google.");
@@ -77,22 +90,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex w-full bg-white font-sans overflow-hidden">
       
-      {/* ========================================= */}
-      {/* BAGIAN KIRI: AREA FORMULIR (LOGIN/DAFTAR) */}
-      {/* ========================================= */}
+      {/* BAGIAN KIRI: AREA FORMULIR */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 sm:p-12 md:p-16 lg:p-24 relative z-10 bg-white shadow-[20px_0_40px_rgba(0,0,0,0.05)]">
         
-        {/* Tombol Kembali (Opsional, jika Anda punya Landing Page) */}
         <Link href="/" className="absolute top-6 left-6 md:top-10 md:left-10 flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-indigo-600 transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           Kembali
         </Link>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          {/* Logo & Judul */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
+          
           <div className="mb-10 text-center lg:text-left">
             <div className="flex justify-center lg:justify-start mb-6">
               <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg shadow-indigo-200">
@@ -103,11 +110,10 @@ export default function LoginPage() {
               {isLogin ? "Selamat Datang" : "Mulai Revolusi"}
             </h1>
             <p className="text-slate-500 font-medium">
-              {isLogin ? "Masuk untuk melanjutkan ke ruang kerja Anda." : "Bergabunglah untuk menyederhanakan administrasi Anda."}
+              {isLogin ? "Masuk untuk melanjutkan ke ruang kerja Anda." : "Bergabunglah ke dalam ekosistem LMS cerdas."}
             </p>
           </div>
 
-          {/* Alert Error (BUG SUDAH DIPERBAIKI DI SINI) */}
           <AnimatePresence>
             {error && (
               <motion.div initial={{ opacity: 0, height: 0, marginBottom: 0 }} animate={{ opacity: 1, height: "auto", marginBottom: 24 }} exit={{ opacity: 0, height: 0, marginBottom: 0 }} className="overflow-hidden">
@@ -119,31 +125,38 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
-          {/* Form Utama */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <AnimatePresence mode="popLayout">
               {!isLogin && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10, height: 0 }}
-                  animate={{ opacity: 1, y: 0, height: "auto" }}
-                  exit={{ opacity: 0, y: -10, height: 0 }}
+                  initial={{ opacity: 0, y: -10, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} exit={{ opacity: 0, y: -10, height: 0 }}
                   className="space-y-5 overflow-hidden"
                 >
+                  {/* 🔥 UI PEMILIH PERAN (ROLE SELECTOR) */}
+                  <div className="bg-slate-50 p-2 rounded-2xl border border-slate-200 flex gap-2">
+                     <button type="button" onClick={() => setRoleDaftar("siswa")} className={`flex-1 py-3 text-[13px] font-bold rounded-xl transition-all ${roleDaftar === "siswa" ? "bg-white text-indigo-600 shadow-sm border border-slate-200" : "text-slate-500 hover:bg-slate-100"}`}>
+                        🎓 Saya Siswa
+                     </button>
+                     <button type="button" onClick={() => setRoleDaftar("guru")} className={`flex-1 py-3 text-[13px] font-bold rounded-xl transition-all ${roleDaftar === "guru" ? "bg-white text-indigo-600 shadow-sm border border-slate-200" : "text-slate-500 hover:bg-slate-100"}`}>
+                        👨‍🏫 Saya Guru
+                     </button>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Nama Lengkap & Gelar</label>
+                      <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Nama Lengkap</label>
                       <input 
                         required={!isLogin} type="text" value={nama} onChange={(e) => setNama(e.target.value)}
                         className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all text-sm font-medium" 
-                        placeholder="Cth: Ahmad, S.Pd"
+                        placeholder={roleDaftar === "guru" ? "Cth: Ahmad, S.Pd" : "Cth: Budi Santoso"}
                       />
                     </div>
                     <div>
-                      <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Asal Sekolah</label>
+                      <label className="block text-[13px] font-bold text-slate-700 mb-1.5">Instansi / Sekolah</label>
                       <input 
                         required={!isLogin} type="text" value={sekolah} onChange={(e) => setSekolah(e.target.value)}
                         className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all text-sm font-medium" 
-                        placeholder="Cth: SMPN 1 Malang"
+                        placeholder="Cth: SMAN 1 Malang"
                       />
                     </div>
                   </div>
@@ -172,9 +185,7 @@ export default function LoginPage() {
             <button 
               type="submit" disabled={isLoading}
               className={`w-full py-4 rounded-xl font-bold text-white transition-all flex justify-center items-center gap-2 mt-2 ${
-                isLoading 
-                  ? 'bg-indigo-400 cursor-not-allowed shadow-none' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-lg shadow-indigo-200'
+                isLoading ? 'bg-indigo-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-lg shadow-indigo-200'
               }`}
             >
               {isLoading && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
@@ -182,14 +193,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="my-8 flex items-center">
             <div className="flex-1 border-t border-slate-100"></div>
             <span className="px-4 text-slate-400 text-[11px] font-black uppercase tracking-widest">Atau masuk dengan</span>
             <div className="flex-1 border-t border-slate-100"></div>
           </div>
 
-          {/* Google Button */}
           <button 
             onClick={handleGoogle} disabled={isLoading} type="button"
             className="w-full flex items-center justify-center gap-3 py-3.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 shadow-sm"
@@ -203,7 +212,6 @@ export default function LoginPage() {
             Google
           </button>
 
-          {/* Toggle Login/Daftar */}
           <div className="mt-8 text-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
             <p className="text-[13px] text-slate-500 font-medium">
               {isLogin ? "Belum memiliki akses?" : "Sudah menjadi bagian dari kami?"}
@@ -219,34 +227,21 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
-      {/* ========================================= */}
-      {/* BAGIAN KANAN: ILUSTRASI PREMIUM (HANYA PC)*/}
-      {/* ========================================= */}
+      {/* BAGIAN KANAN: ILUSTRASI */}
       <div className="hidden lg:flex w-1/2 relative bg-slate-900 items-center justify-center overflow-hidden">
-        
-        {/* Latar Belakang Abstrak Dinamis */}
         <div className="absolute inset-0 z-0">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/30 rounded-full blur-[120px] mix-blend-screen"></div>
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-500/30 rounded-full blur-[120px] mix-blend-screen"></div>
-          {/* Pola Grid Halus */}
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
         </div>
 
-        {/* Konten Kanan (Quotes & Visual) */}
         <div className="relative z-10 p-16 max-w-xl">
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
-            className="bg-white/10 backdrop-blur-xl border border-white/20 p-10 rounded-[32px] shadow-2xl"
-          >
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-white mb-6 border border-white/30 text-xl">
-              ✨
-            </div>
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.2 }} className="bg-white/10 backdrop-blur-xl border border-white/20 p-10 rounded-[32px] shadow-2xl">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-white mb-6 border border-white/30 text-xl">✨</div>
             <h2 className="text-2xl font-black text-white leading-tight mb-4">
-              "Teknologi hadir bukan sebagai pengajar utama, melainkan asisten tak kasat mata yang mereduksi beban operasional, sehingga pendekatan andragogi dan deep learning dapat dieksekusi secara utuh."
+              "Teknologi hadir bukan sebagai pengajar utama, melainkan asisten tak kasat mata yang mereduksi beban operasional pendidikan."
             </h2>
-            <p className="text-indigo-200 font-medium text-sm">
-              — Ahmad Albert Afrilsyah
-            </p>
+            <p className="text-indigo-200 font-medium text-sm">— Ahmad Albert Afrilsyah</p>
             
             <div className="mt-12 pt-8 border-t border-white/10 flex items-center gap-4">
               <div className="flex -space-x-3">
@@ -254,13 +249,11 @@ export default function LoginPage() {
                 <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-slate-800 shadow-sm flex items-center justify-center text-xs font-bold">👨‍💼</div>
                 <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-slate-800 shadow-sm flex items-center justify-center text-xs font-bold">🎓</div>
               </div>
-              <p className="text-white/60 text-xs font-medium">Bergabung bersama ratusan pendidik lainnya.</p>
+              <p className="text-white/60 text-xs font-medium">Bergabung bersama ratusan Pendidik & Siswa lainnya.</p>
             </div>
           </motion.div>
         </div>
-
       </div>
-
     </div>
   );
 }
