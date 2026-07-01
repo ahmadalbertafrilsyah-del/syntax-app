@@ -18,6 +18,7 @@ export default function GeneratorPage() {
   const [sumber, setSumber] = useState("Kemendikbud Ristek"); 
   const [tipe, setTipe] = useState("Modul Ajar (PPM)");
   const [fase, setFase] = useState("");
+  const [kelas, setKelas] = useState("");
   const [mapel, setMapel] = useState("");
   
   const [topik, setTopik] = useState("");
@@ -70,6 +71,15 @@ export default function GeneratorPage() {
   const [mediaResult, setMediaResult] = useState("");
 
   const pdfRef = useRef<HTMLDivElement>(null);
+
+  const opsiKelas = {
+    "Fase A (Kelas 1-2 SD/MI)": ["Kelas 1", "Kelas 2"],
+    "Fase B (Kelas 3-4 SD/MI)": ["Kelas 3", "Kelas 4"],
+    "Fase C (Kelas 5-6 SD/MI)": ["Kelas 5", "Kelas 6"],
+    "Fase D (Kelas 7-9 SMP/MTs)": ["Kelas 7", "Kelas 8", "Kelas 9"],
+    "Fase E (Kelas 10 SMA/MA)": ["Kelas 10"],
+    "Fase F (Kelas 11-12 SMA/MA)": ["Kelas 11", "Kelas 12"],
+  };
 
   const p5Kemendikbud = ["Semua Dimensi P5", "Beriman, Bertakwa & Berakhlak Mulia", "Berkebinekaan Global", "Bergotong Royong", "Mandiri", "Bernalar Kritis", "Kreatif"];
   const p5Kemenag = ["Semua Nilai P5 & PPRA", "Berkeadaban (Ta'addub)", "Keteladanan (Qudwah)", "Kewarganegaraan (Muwatana)", "Mengambil jalan tengah (Tawassut)", "Berimbang (Tawazun)", "Lurus dan tegas (I'tidal)", "Kesetaraan (Musawa)", "Musyawarah (Syura)", "Toleransi (Tasamuh)", "Dinamis dan inovatif (Tathawwur)"];
@@ -153,7 +163,7 @@ export default function GeneratorPage() {
         topikKirim += `\n[Konteks Dokumen Sebelumnya Agar Selaras]:\n${dokumenTerakhir.substring(0, 2500)}...`;
       }
 
-      const streamResult = await generatePerangkatAjar(tipe, fase, mapel, topikKirim, sumber);
+      const streamResult = await generatePerangkatAjar(tipe, fase, kelas, mapel, topikKirim, sumber);
       setIsLoading(false); setIsStreaming(true);
 
       for await (const chunk of streamResult) {
@@ -211,7 +221,6 @@ export default function GeneratorPage() {
   const handleCopyText = () => { navigator.clipboard.writeText(hasil); alert("Teks disalin!"); };
   const handleShareFlipbook = () => { if (docId) { window.open(`${window.location.origin}/share/flipbook/${docId}`, '_blank'); } };
 
-  // 🔥 FUNGSI UNDUH WORD DIPERBARUI
   const handleDownloadWord = () => {
     if (!pdfRef.current) return;
     
@@ -231,7 +240,6 @@ export default function GeneratorPage() {
           h2 { font-size: 14pt !important; font-weight: bold !important; margin-top: 18pt; margin-bottom: 6pt; }
           h3 { font-size: 12pt !important; font-weight: bold !important; margin-top: 12pt; }
           p, ul, ol { margin-bottom: 10pt; line-height: 1.5; }
-          /* Fix khusus list di Word agar tidak nabrak */
           li { margin-bottom: 4pt; } 
           table { width: 100%; border-collapse: collapse; margin-top: 15pt; margin-bottom: 15pt; border: 1pt solid black !important; }
           td, th { border: 1pt solid black !important; padding: 5pt 8pt; vertical-align: top; text-align: left; }
@@ -250,7 +258,6 @@ export default function GeneratorPage() {
     document.body.removeChild(fileDownload);
   };
 
-  // 🔥 FUNGSI CETAK PDF DIPERBARUI
   const handlePrintPDF = () => {
     const printContent = pdfRef.current?.innerHTML;
     if (!printContent) return;
@@ -329,7 +336,6 @@ export default function GeneratorPage() {
         <div className="w-full">
           <form onSubmit={handleGenerate} className="bg-white p-5 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-5 md:gap-6">
             
-            {/* IDENTITAS */}
             <div className="bg-[#F4F5F7]/50 p-5 rounded-[24px] border border-slate-100 mb-2">
               <label className="block text-[13px] font-bold text-slate-700 mb-4 flex items-center gap-2">
                  <span className="text-indigo-500 text-lg">🏫</span> Identitas Resmi (Diperlukan Untuk Export Dokumen)
@@ -344,7 +350,7 @@ export default function GeneratorPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
               <div>
                 <label className="block text-[13px] font-bold mb-2 text-slate-700">Sumber Referensi Dasar</label>
                 <select value={sumber} onChange={(e) => setSumber(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:border-indigo-500">
@@ -353,8 +359,8 @@ export default function GeneratorPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[13px] font-bold mb-2 text-slate-700">Fase / Kelas</label>
-                <select required value={fase} onChange={(e) => setFase(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:border-indigo-500">
+                <label className="block text-[13px] font-bold mb-2 text-slate-700">Fase</label>
+                <select required value={fase} onChange={(e) => { setFase(e.target.value); setKelas(""); }} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:border-indigo-500">
                   <option value="">Pilih Fase...</option>
                   <option value="Fase A (Kelas 1-2 SD/MI)">Fase A (Kelas 1-2)</option>
                   <option value="Fase B (Kelas 3-4 SD/MI)">Fase B (Kelas 3-4)</option>
@@ -362,6 +368,15 @@ export default function GeneratorPage() {
                   <option value="Fase D (Kelas 7-9 SMP/MTs)">Fase D (Kelas 7-9)</option>
                   <option value="Fase E (Kelas 10 SMA/MA)">Fase E (Kelas 10)</option>
                   <option value="Fase F (Kelas 11-12 SMA/MA)">Fase F (Kelas 11-12)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[13px] font-bold mb-2 text-slate-700">Kelas</label>
+                <select required value={kelas} onChange={(e) => setKelas(e.target.value)} disabled={!fase} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:border-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed">
+                  <option value="">Pilih Kelas...</option>
+                  {fase && opsiKelas[fase as keyof typeof opsiKelas]?.map((kls) => (
+                    <option key={kls} value={kls}>{kls}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -382,7 +397,6 @@ export default function GeneratorPage() {
             <div className="overflow-hidden -mx-2 px-2 -mb-2 pb-2">
               <AnimatePresence mode="wait">
                 
-                {/* 1. MODUL AJAR & RPP */}
                 {(tipe === "Modul Ajar (PPM)" || tipe === "RPP") && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 mt-4">
@@ -427,7 +441,6 @@ export default function GeneratorPage() {
                   </motion.div>
                 )}
 
-                {/* 2. ANALISIS TP & ATP */}
                 {(tipe === "Analisis TP" || tipe === "Alur TP (ATP)") && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-sky-50/50 p-6 rounded-3xl border border-sky-100 mt-4">
@@ -447,7 +460,6 @@ export default function GeneratorPage() {
                   </motion.div>
                 )}
 
-                {/* 3. PROTA & PROMES */}
                 {(tipe === "PROTA" || tipe === "PROMES") && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-amber-50/50 p-6 rounded-3xl border border-amber-100 mt-4">
@@ -469,7 +481,6 @@ export default function GeneratorPage() {
                   </motion.div>
                 )}
 
-                {/* 4. RUBRIK PENILAIAN */}
                 {tipe === "Rubrik Penilaian" && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-purple-50/50 p-6 rounded-3xl border border-purple-100 mt-4">
@@ -488,7 +499,6 @@ export default function GeneratorPage() {
                   </motion.div>
                 )}
 
-                {/* 5. BANK SOAL */}
                 {tipe === "Bank Soal" && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                     <div className="bg-rose-50/50 p-6 rounded-3xl border border-rose-100 space-y-5 mt-4">
@@ -614,7 +624,6 @@ export default function GeneratorPage() {
                       .markdown-body tr { page-break-inside: avoid; } 
                       .markdown-body h1 { font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 2rem; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 1rem; } 
                       .markdown-body h2, .markdown-body h3, .markdown-body h4 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: 800; color: #1e293b; } 
-                      /* CSS perbaikan list khusus soal PG agar turun ke bawah */
                       .markdown-body ul, .markdown-body ol { padding-left: 20px; margin-bottom: 1rem; }
                       .markdown-body li { margin-bottom: 4px; }
                       .sig-table, .sig-table td, .sig-table th, .sig-table tr { border: none !important; padding: 4px; vertical-align: top; }

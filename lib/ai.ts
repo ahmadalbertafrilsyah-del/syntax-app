@@ -1,4 +1,3 @@
-// lib/ai.ts
 "use server";
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
@@ -17,15 +16,18 @@ function getActiveApiKey(): string {
 // ============================================================================
 // FITUR 1: GENERATOR PERANGKAT AJAR (SUPER PROMPT ANTI-TERPOTONG)
 // ============================================================================
-export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: string, topik: string, sumber: string) {
+export async function* generatePerangkatAjar(tipe: string, fase: string, kelas: string, mapel: string, topik: string, sumber: string) {
   try {
     console.log(`\n--- MEMULAI PROSES AI (MODE STREAMING) ---`);
-    console.log(`Request: ${tipe} | ${mapel} | ${fase} | ${topik} | ${sumber}`);
+    console.log(`Request: ${tipe} | ${mapel} | ${fase} - ${kelas} | ${topik} | ${sumber}`);
 
     const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    let konteksKurikulum = "Gunakan pengetahuan umum Kurikulum Merdeka.";
+    let konteksKurikulum = sumber === "Kementerian Agama" 
+      ? "Gunakan Capaian Pembelajaran (CP) terbaru berdasarkan Keputusan Menteri Agama (KMA) atau panduan Kurikulum Merdeka madrasah yang relevan."
+      : "Gunakan Capaian Pembelajaran (CP) terbaru berdasarkan SK Kepala BSKAP Kemendikbudristek yang berlaku.";
+      
     let profilPelajar = "Profil Pelajar Pancasila (P5)";
     let tambahanInstruksiSumber = "";
 
@@ -80,7 +82,7 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
 
     const prompt = `
       Anda adalah pakar kurikulum dan ahli pendidikan profesional di Indonesia.
-      Tugas utama Anda: Buat dokumen "${tipe}" untuk mata pelajaran "${mapel}" pada jenjang "${fase}".
+      Tugas utama Anda: Buat dokumen "${tipe}" untuk mata pelajaran "${mapel}" pada jenjang "${fase}" khusus untuk "${kelas}".
       Integrasi Profil Pelajar Wajib: ${profilPelajar}
       ${tambahanInstruksiSumber}
 
@@ -89,6 +91,7 @@ export async function* generatePerangkatAjar(tipe: string, fase: string, mapel: 
 
       REFERENSI KURIKULUM DASAR:
       ${konteksKurikulum}
+      WAJIB pastikan materi dan kedalaman kompetensi disesuaikan secara spesifik dengan target ${kelas}, jangan dicampur dengan kelas lain dalam fase yang sama.
 
       ATURAN BAKU & FORMAT PEMBUATAN (WAJIB DIPATUHI 100%):
       ${instruksiSistem}
@@ -291,14 +294,26 @@ export async function* evaluateEssayStream(mapel: string, topik: string, kunciJa
 // ============================================================================
 // FITUR 5: CHAT ASISTEN MENGAJAR (WIDGET MELAYANG)
 // ============================================================================
-export async function* chatAssistantStream(history: {role: "user" | "model", parts: {text: string}[]}[], newMessage: string) {
+export async function* chatAssistantStream(
+  history: {role: "user" | "model", parts: {text: string}[]}[], 
+  newMessage: string,
+  mapel: string,
+  adminScope: string
+) {
   try {
     const apiKey = getActiveApiKey();
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Menggunakan gemini-1.5-pro sesuai preferensi sebelumnya untuk chat
+    // 🔥 PERBAIKAN: Gunakan System Instruction khusus untuk Gemini 1.5 Pro
+    let systemPrompt = `Kamu adalah Asisten AI untuk Guru mata pelajaran "${mapel}". Tugasmu HANYA membantu seputar pendidikan, pedagogi, dan pembuatan materi untuk mata pelajaran tersebut. TOLAK DENGAN SOPAN semua pertanyaan yang tidak berkaitan dengan pendidikan atau mata pelajaran "${mapel}". Jangan bertele-tele.`;
+    
+    if (adminScope) {
+      systemPrompt += `\n\nInstruksi Tambahan Admin: ${adminScope}`;
+    }
+
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-pro",
+      systemInstruction: systemPrompt,
       generationConfig: { maxOutputTokens: 8192, temperature: 0.7 },
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -308,6 +323,7 @@ export async function* chatAssistantStream(history: {role: "user" | "model", par
       ],
     });
 
+    // Mulai chat dengan history yang sudah divalidasi dari client
     const chat = model.startChat({ history: history });
     const result = await chat.sendMessageStream(newMessage);
     

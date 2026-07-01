@@ -70,18 +70,16 @@ export default function ChatWidget() {
     setIsLoading(true);
 
     try {
-      const historyToSend = messages.map(m => ({
+      // 🔥 PERBAIKAN: Potong elemen pertama (pesan sambutan model) agar history dimulai dari "user". 
+      // Variabel `messages` saat ini HANYA berisi riwayat lama, belum termasuk `userText` baru. 
+      // Ini sudah sangat pas dengan struktur yang diminta Gemini API.
+      const historyToSend = messages.slice(1).map(m => ({
         role: m.role,
         parts: [{ text: m.text }]
       }));
 
-      let strictPrompt = `[PENTING: Kamu adalah Asisten AI untuk Guru mata pelajaran "${guruMapel}". Tugasmu HANYA membantu seputar pendidikan, pedagogi, dan pembuatan materi untuk mata pelajaran tersebut. TOLAK DENGAN SOPAN semua pertanyaan yang tidak berkaitan dengan pendidikan atau mata pelajaran "${guruMapel}". Jangan bertele-tele.]\n\n`;
-      
-      if (adminScope) strictPrompt += `[Instruksi Tambahan Admin: ${adminScope}]\n\n`;
-
-      const contextualMessage = `${strictPrompt}Pertanyaan Guru: ${userText}`;
-
-      const stream = await chatAssistantStream(historyToSend, contextualMessage);
+      // 🔥 PERBAIKAN: Panggil fungsi AI dengan parameter yang rapi
+      const stream = await chatAssistantStream(historyToSend, userText, guruMapel, adminScope);
       
       let aiResponse = "";
       setMessages(prev => [...prev, { role: "model", text: "", time: currentTime }]); 
@@ -119,7 +117,6 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }} 
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            // 🔥 PERBAIKAN DESKTOP: Mengubah anchor posisi menggunakan mt-2 dan right-0 agar rapi di bawah tombol
             className="fixed top-[72px] left-4 right-4 md:absolute md:top-full md:left-auto md:right-0 md:mt-2 bg-[#E4EBEF] w-auto md:w-[380px] h-[500px] md:h-[550px] max-h-[calc(100vh-160px)] md:max-h-[calc(100vh-100px)] rounded-[20px] shadow-2xl flex flex-col overflow-hidden border border-slate-200/60 transform origin-top md:origin-top-right z-[100]"
           >
             <div className="bg-white px-4 py-3 flex items-center justify-between shadow-sm z-10 shrink-0">

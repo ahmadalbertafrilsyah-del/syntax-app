@@ -27,7 +27,21 @@ export default function KoleksiPage() {
         
         const data = querySnapshot.docs.map((docSnap) => {
           const docData = docSnap.data();
-          const dateObj = docData.dibuat_pada ? docData.dibuat_pada.toDate() : new Date();
+          
+          // 🔥 PERBAIKAN: Menangkap berbagai kemungkinan nama field tanggal dari Firestore
+          const rawDate = docData.createdAt || docData.dibuat_pada || docData.created_at || docData.timestamp || docData.date;
+          
+          let dateObj = new Date();
+          if (rawDate) {
+            if (typeof rawDate.toDate === 'function') {
+              dateObj = rawDate.toDate(); // Jika format asli Firebase Timestamp
+            } else if (rawDate.seconds) {
+              dateObj = new Date(rawDate.seconds * 1000); // Jika ter-parse sebagai objek seconds
+            } else {
+              dateObj = new Date(rawDate); // Jika disave sebagai string/number biasa
+            }
+          }
+
           const tanggalFormat = dateObj.toLocaleDateString("id-ID", { 
             day: "numeric", month: "short", year: "numeric" 
           });
@@ -149,7 +163,6 @@ export default function KoleksiPage() {
           <p className="animate-pulse font-bold text-slate-600 text-sm md:text-base">Membuka Lemari Arsip...</p>
         </div>
       ) : (
-        // PERUBAHAN GRID: grid-cols-2 untuk layar HP (minimalis/padat)
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
           <AnimatePresence>
             {filteredData.length > 0 ? (
@@ -168,7 +181,6 @@ export default function KoleksiPage() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                    // Padding diperkecil di HP agar lebih hemat ruang
                     className="bg-white rounded-[16px] md:rounded-[20px] border border-slate-100 shadow-sm hover:shadow-md transition-all p-3 md:p-4 flex flex-col h-full"
                   >
                     
